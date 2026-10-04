@@ -1,0 +1,68 @@
+name: Trigger sub-CI
+
+# Fans out to the CI of the GitHub-hosted dependency repositories so each
+# branch of a coordinated set (same branch name across repos) gets its own
+# CI re-run on demand. Each repository tests in isolation with its own
+# dependency resolution, and the dispatch is fire-and-forget (results via
+# the summary links); the combined workspace is verified locally with
+# `uv sync` + pytest. GitLab-hosted dependencies (nomad-FAIR, nomad-gui)
+# are out of scope and are not dispatched.
+#
+# Requires the `SUB_CI_TOKEN` secret: a fine-grained PAT with `actions: write`
+# on the dependency repositories. The target workflow must declare a
+# `workflow_dispatch` trigger; repositories where it is missing are reported
+# as warnings, not failures.
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Branch (or tag) to run the dependency CIs on; 'tracked' resolves to each repository's default branch"
+        required: true
+        default: "tracked"
+      repos:
+        description: "Comma-separated repository names to trigger (subset of the default list)"
+        required: false
+        default: "nomad-simulations,nomad-parser-plugins-simulation,nomad-file-parser,nomad-results-normalizer"
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dispatch dependency CIs
+        env:
+          GH_TOKEN: ${{ secrets.SUB_CI_TOKEN }}
+          REF: ${{ inputs.ref }}
+          REPOS: ${{ inputs.repos }}
+        run: |
+          failed=0
+          for repo in ${REPOS//,/ }; do
+            if [ "$REF" = "tracked" ]; then
+              ref=$(gh api "repos/FAIRmat-NFDI/$repo" -q .default_branch)
+            else
+              ref="$REF"
+            fi
+            echo "::group::FAIRmat-NFDI/$repo @ $ref"
+            if gh workflow run actions.yml --repo "FAIRmat-NFDI/$repo" --ref "$ref"; then
+              echo "dispatched actions.yml on FAIRmat-NFDI/$repo@$ref"
+            else
+              echo "::warning title=FAIRmat-NFDI/$repo::could not dispatch actions.yml on ref '$ref'. The ref does not exist, the workflow lacks a 'workflow_dispatch' trigger, or the SUB_CI_TOKEN secret is missing or lacks 'actions: write' on this repository."
+              failed=$((failed + 1))
+            fi
+            echo "::endgroup::"
+          done
+          echo "done; $failed repositories could not be dispatched"
+
+      - name: Link to dispatched runs
+        env:
+          REF: ${{ inputs.ref }}
+          REPOS: ${{ inputs.repos }}
+        run: |
+          echo "## Dispatched runs" >> "$GITHUB_STEP_SUMMARY"
+          for repo in ${REPOS//,/ }; do
+            if [ "$REF" = "tracked" ]; then
+              echo "- [FAIRmat-NFDI/$repo actions](https://github.com/FAIRmat-NFDI/$repo/actions)" >> "$GITHUB_STEP_SUMMARY"
+            else
+              echo "- [FAIRmat-NFDI/$repo actions](https://github.com/FAIRmat-NFDI/$repo/actions?query=branch%3A$REF)" >> "$GITHUB_STEP_SUMMARY"
+            fi
+          done

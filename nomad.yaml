@@ -1,0 +1,16 @@
+keycloak:
+  realm_name: 'fairdi_nomad_test'
+
+plugins:
+  entry_points:
+    # Explicit include of the Area C stack; wildcards expand against the
+    # installed `nomad.plugin` entry points (nomad-file-parser is a plain
+    # library and registers none).
+    include:
+      - 'nomad_gui.*'
+      - 'nomad_simulations.*'
+      - 'nomad_simulation_parsers.*'
+      - 'nomad_results_normalizer.*'
+      # built-in search apps used by the GUI
+      - 'apps/1_all/1_entries'
+      - 'apps/2_theory/1_calculations'
