@@ -1,0 +1,71 @@
+name: Merge coordinated PRs
+
+# Merge step of the coordinated development protocol (README): squash-merges
+# the package pull requests that share this distro branch's name, leaves first,
+# and only once every one of them can be merged. Then points the distro branch's
+# submodules at the resulting commits, records the packages' base branches in
+# pyproject.toml and .gitmodules, and pushes that commit to the distro branch.
+# The distro pull request itself is left for a human to merge. Run it from the
+# distro branch of the coordinated change (Actions tab: "Use workflow from").
+# The logic lives in scripts/merge_prs.py, which also runs locally.
+#
+# Requires the `MERGE_TOKEN` secret: a fine-grained PAT of a user who may merge
+# in the package repositories (`pull_requests: write`, `contents: write` on
+# each). Branch protection of the package repositories still applies.
+# GitLab-hosted packages (nomad-FAIR, nomad-gui) are reported, not merged.
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: "Shared branch name of the coordinated change (default: the branch this workflow runs on)"
+        required: false
+        default: ""
+      dry_run:
+        description: "Only report which pull requests would be merged"
+        type: boolean
+        default: true
+      body:
+        description: "Squash commit message body for every merged pull request (default: each pull request's description)"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+jobs:
+  merge:
+    runs-on: ubuntu-latest
+    env:
+      BRANCH: ${{ inputs.branch || github.ref_name }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch || github.ref_name }}
+
+      - name: Merge package pull requests and update submodule pointers
+        env:
+          GH_TOKEN: ${{ secrets.MERGE_TOKEN }}
+          BODY: ${{ inputs.body }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          args=()
+          [ "$DRY_RUN" = "true" ] && args+=(-n)
+          if [ -n "$BODY" ]; then
+            printf '%s' "$BODY" > "$RUNNER_TEMP/body.txt"
+            args+=(--body-file "$RUNNER_TEMP/body.txt")
+          fi
+          python3 scripts/merge_prs.py "$BRANCH" "${args[@]}" | tee "$RUNNER_TEMP/report.txt" || status=$?
+          { echo "## Merge report for \`$BRANCH\`"; echo; echo '```'; cat "$RUNNER_TEMP/report.txt"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          exit "${status:-0}"
+
+      - name: Push the distro branch
+        if: ${{ !inputs.dry_run }}
+        run: |
+          if [ "$(git rev-parse HEAD)" = "$(git rev-parse "origin/$BRANCH")" ]; then
+            echo "no pointer update to push"
+          else
+            git push origin "HEAD:$BRANCH"
+          fi
