@@ -1,4 +1,4 @@
-<!-- generated-by: Claude Opus 4.8 | last_updated: 2026-09-09 -->
+<!-- generated-by: Claude Opus 4.8 | last_updated: 2026-10-08 -->
 # runschema → nomad-simulations schema mapping
 
 This document maps every attribute of the legacy **runschema** (`Run` / `System` / `Method` /
@@ -15,8 +15,8 @@ right column its modern equivalent. **Status** is one of:
 - **Unmapped** — no nomad-simulations equivalent yet; the *Unmapped rows are a coverage-gap
   audit* of the modern schema.
 
-**Overall:** 189 mapped, 210 partial, 185 unmapped of 584 attributes
-(32.4% mapped, 68.3% mapped-or-partial).
+**Overall:** 188 mapped, 210 partial, 186 unmapped of 584 attributes
+(32.2% mapped, 68.2% mapped-or-partial).
 
 This mapping was authored by reading both schema sources; each section was self-checked so that
 every left path exists in runschema and every cited target exists in nomad-simulations. It is a
@@ -133,7 +133,7 @@ as a starting point for schema-coverage discussion.
 
 ## Method (core) → ModelMethod
 
-**Summary:** 60 mapped, 73 partial, 38 unmapped (of 171; 35.09% mapped).
+**Summary:** 59 mapped, 73 partial, 39 unmapped (of 171; 34.50% mapped).
 
 | runschema path | Status | nomad-simulations target | Notes |
 | --- | --- | --- | --- |
@@ -295,7 +295,7 @@ as a starting point for schema-coverage discussion.
 | `method.force_field.model.contributions.functional_form` | Mapped | `Potential.functional_form` | |
 | `method.force_field.model.contributions.n_parameters` | Unmapped | — | No parameter-count quantity; modern `parameters` is a `ParameterEntry[]`. |
 | `method.force_field.model.contributions.parameters` | Partial | `Potential.parameters[]` (`ParameterEntry`) | Legacy dict → structured name/value/unit entries. |
-| `method.force_field.model.contributions.contributions` | Mapped | `Potential.contributions[]` (`BaseModelMethod`) | Nested contributions via inherited `contributions`. |
+| `method.force_field.model.contributions.contributions` | Unmapped | — | Modern contributions are one level deep: `ForceField.contributions[]` holds `Potential` sections, and `Potential` (a `BaseModelMethod`) has no `contributions` of its own. |
 | `method.force_field.force_calculations` | Mapped | `ForceCalculations` (NumericalSettings) | |
 | `method.force_field.force_calculations.vdw_cutoff` | Mapped | `ForceCalculations.vdw_cutoff` | |
 | `method.force_field.force_calculations.coulomb_type` | Mapped | `ForceCalculations.coulomb_type` | Same MEnum. |
@@ -315,16 +315,16 @@ as a starting point for schema-coverage discussion.
 
 | runschema path | Status | nomad-simulations target | Notes |
 | --- | --- | --- | --- |
-| `method.hubbard_kanamori_model.orbital` | Partial | `ModelMethod.contributions[HubbardInteractions].orbitals_ref` | Legacy is a single orbital-label string; modern is a list of `ElectronicState` references. |
-| `method.hubbard_kanamori_model.n_orbital` | Mapped | `ModelMethod.contributions[HubbardInteractions].n_orbitals` | |
-| `method.hubbard_kanamori_model.u` | Mapped | `ModelMethod.contributions[HubbardInteractions].u_interaction` | |
-| `method.hubbard_kanamori_model.jh` | Mapped | `ModelMethod.contributions[HubbardInteractions].j_hunds_coupling` | |
-| `method.hubbard_kanamori_model.up` | Mapped | `ModelMethod.contributions[HubbardInteractions].u_interorbital_interaction` | |
-| `method.hubbard_kanamori_model.j` | Mapped | `ModelMethod.contributions[HubbardInteractions].j_local_exchange_interaction` | Legacy `j` (exchange) → `j_local_exchange_interaction`. |
-| `method.hubbard_kanamori_model.u_effective` | Mapped | `ModelMethod.contributions[HubbardInteractions].u_effective` | |
-| `method.hubbard_kanamori_model.slater_integrals` | Mapped | `ModelMethod.contributions[HubbardInteractions].slater_integrals` | |
-| `method.hubbard_kanamori_model.umn` | Mapped | `ModelMethod.contributions[HubbardInteractions].u_matrix` | Local Coulomb interaction matrix. |
-| `method.hubbard_kanamori_model.double_counting_correction` | Mapped | `ModelMethod.contributions[HubbardInteractions].double_counting_correction` | |
+| `HubbardKanamoriModel.orbital` | Partial | `ModelMethod.contributions[HubbardInteractions].orbitals_ref` | Legacy is a single orbital-label string; modern is a list of `ElectronicState` references. |
+| `HubbardKanamoriModel.n_orbital` | Mapped | `ModelMethod.contributions[HubbardInteractions].n_orbitals` | |
+| `HubbardKanamoriModel.u` | Mapped | `ModelMethod.contributions[HubbardInteractions].u_interaction` | |
+| `HubbardKanamoriModel.jh` | Mapped | `ModelMethod.contributions[HubbardInteractions].j_hunds_coupling` | |
+| `HubbardKanamoriModel.up` | Mapped | `ModelMethod.contributions[HubbardInteractions].u_interorbital_interaction` | |
+| `HubbardKanamoriModel.j` | Mapped | `ModelMethod.contributions[HubbardInteractions].j_local_exchange_interaction` | Legacy `j` (exchange) → `j_local_exchange_interaction`. |
+| `HubbardKanamoriModel.u_effective` | Mapped | `ModelMethod.contributions[HubbardInteractions].u_effective` | |
+| `HubbardKanamoriModel.slater_integrals` | Mapped | `ModelMethod.contributions[HubbardInteractions].slater_integrals` | |
+| `HubbardKanamoriModel.umn` | Mapped | `ModelMethod.contributions[HubbardInteractions].u_matrix` | Local Coulomb interaction matrix. |
+| `HubbardKanamoriModel.double_counting_correction` | Mapped | `ModelMethod.contributions[HubbardInteractions].double_counting_correction` | |
 | `method.tb.slater_koster` | Partial | `SlaterKoster` (TB subclass) | Legacy is a SubSection; modern is a `TB` subclass, not a nested SubSection. |
 | `method.tb.xtb` | Partial | `xTB` (TB subclass) | Legacy SubSection; modern is a `TB` subclass. |
 | `method.tb.wannier` | Partial | `Wannier` (TB subclass) | Legacy SubSection; modern is a `TB` subclass. |
@@ -365,7 +365,7 @@ as a starting point for schema-coverage discussion.
 | `method.tb.wannier.convergence_tolerance_max_localization` | Unmapped | — | No convergence-tolerance quantity on modern `Wannier`. |
 | `method.tb.wannier.energy_window_outer` | Mapped | `Wannier.energy_window_outer` | |
 | `method.tb.wannier.energy_window_inner` | Mapped | `Wannier.energy_window_inner` | |
-| `method.lattice_model_hamiltonian.hubbard_kanamori_model` | Mapped | `ModelMethod.contributions[HubbardInteractions]` | Same target as `method.hubbard_kanamori_model`. |
+| `method.lattice_model_hamiltonian.hubbard_kanamori_model` | Mapped | `ModelMethod.contributions[HubbardInteractions]` | Same target as the `HubbardKanamoriModel.*` rows; also reachable as `method.atom_parameters.hubbard_kanamori_model`. |
 | `method.core_hole.solver` | Unmapped | — | Modern `CoreHoleSpectra` `solver` is commented out; no equivalent quantity. |
 | `method.core_hole.edge` | Mapped | `CoreHoleSpectra.edge` | Same MEnum edge labels; modern resolves from `core_hole_ref`. |
 | `method.core_hole.mode` | Mapped | `CoreHoleSpectra.type` | Legacy `mode` ('absorption'/'emission') → modern `type`. |
@@ -381,7 +381,7 @@ as a starting point for schema-coverage discussion.
 | `method.gw.n_states` | Mapped | `GW.n_states` (from `ExcitedStateMethodology`) | |
 | `method.gw.n_empty_states` | Mapped | `GW.n_empty_states` (from `ExcitedStateMethodology`) | |
 | `method.gw.broadening` | Mapped | `GW.broadening` (from `ExcitedStateMethodology`) | |
-| `method.gw.type (ExcitedStateMethodology.type)` | Unmapped | — | Base `ExcitedStateMethodology.type` (generic string) is overridden by `GW.type`; no separate generic type slot in modern. |
+| `ExcitedStateMethodology.type` | Unmapped | — | Base `ExcitedStateMethodology.type` (generic string) is overridden by `GW.type`; no separate generic type slot in modern. |
 | `method.gw.k_mesh` | Partial | `BaseModelMethod.numerical_settings[KSpace.k_mesh[KMesh]]` | Modern excited-state classes carry no `k_mesh` SubSection; k-meshes live under `numerical_settings[KSpace]`. |
 | `method.gw.q_mesh` | Unmapped | — | No `q_mesh` on modern `ExcitedStateMethodology`/`GW`; `KSpace` models only `k_mesh`/`k_line_path`. |
 | `method.gw.frequency_mesh` | Unmapped | — | `FrequencyMesh` is not implemented in nomad-simulations (only named in a docstring enum). |
