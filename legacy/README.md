@@ -27,7 +27,19 @@ uv run python legacy/parity/parity_collect.py new $DATA new.json --normalize
 uv run python legacy/parity/parity_report.py --legacy legacy.json --new new.json
 ```
 
-Run the commands from the distribution root, so that its `nomad.yaml` applies: the parser repository's own `nomad.yaml` excludes the new VASP parser. The report is written to `parity_report.md`.
+Run the commands from the distribution root, so that its `nomad.yaml` applies: the parser repository's own `nomad.yaml` excludes the new VASP parser. The report is written to `parity_report.md`. Collection takes a few minutes per generation with `--normalize`; `--skip` lists code directories to leave out (ORCA by default).
+
+### How the comparison works
+
+`parity_collect.py` walks the code directories of the data directory and, for each file, picks the first parser of the requested generation whose `is_mainfile` accepts it, in NOMAD's `matching_order`. Both generations are loaded in this workspace, and `match_parser` alone would hand each file to whichever parser matches first, regardless of generation. Hidden files and directories (visualisation caches, trajectory offsets) are skipped. Each archive gets minimal entry metadata, which the legacy normalizers require, and with `--normalize` it runs through the full normalizer chain, so that quantities the new schema derives in `normalize` count as filled.
+
+The two generations record their paths differently, to match the two columns of the mapping table. For the legacy parsers, every filled quantity and sub-section under `archive.run` is written relative to `Run` (`calculation.energy.total.value`). For the new parsers, every filled quantity and sub-section under `archive.data` is written relative to each enclosing section class and its base classes (`Outputs.total_energies.value`, `Simulation.outputs.total_energies.value`, ...), so that a target such as `Outputs.total_energies` is found wherever the section sits.
+
+`parity_report.py` then takes the leaves of each legacy archive (paths without filled children) and classifies them, per code, over all files both generations parsed without error. A path with an `x_` component or ending in `_ref` or `_raw` is code-specific. Any other path is looked up in the table, first as written, then with the `run.` prefix, falling back to its closest listed ancestor. A missing row makes the path unknown, an Unmapped row a schema gap. Otherwise, the row is parity if the new archive fills the target or anything below it, and a parser gap if not. Counts are distinct table rows, so a quantity filled in many files counts once.
+
+### Reading the report
+
+A parser gap is the actionable outcome for the parser side: the schema has a place for the quantity, and the legacy parser extracts it from the same file. A schema gap points at `nomad-simulations` instead, and an unknown path at the table. Keep three limits in mind. The comparison only sees what the test files contain, so a code with one file is compared on one calculation. Partial rows count as parity once the target is filled, even where the Notes describe a loss. The ancestor fallback credits an unlisted leaf to its parent's row, which can hide a missing table entry behind a parity count. Files that fail to parse or normalize on either side are listed per code and left out of the counts.
 
 ## Tests
 
