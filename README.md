@@ -2,7 +2,7 @@
 
 This repository is the common starting base for FAIRmat Area C (computational materials science) to develop setups that coordinate changes across the NOMAD simulation stack. It is a fork of [`nomad-distro-dev`](https://github.com/FAIRmat-NFDI/nomad-distro-dev): a `uv` workspace that installs `nomad-lab` and a curated set of plugins in editable mode from git submodules under `packages/`, so a single environment spans all repositories under active development.
 
-For the general setup instructions (Docker services, `uv` installation, adding or removing plugins, day-to-day commands), refer to the upstream [`nomad-distro-dev` README](https://github.com/FAIRmat-NFDI/nomad-distro-dev#readme). This README only covers what is specific to the Area C distribution: which packages it tracks, the local setup with worktrees and package branches, and the protocol for coordinated branches, pull requests, and CI across them.
+For the general setup instructions (Docker services, `uv` installation, adding or removing plugins, day-to-day commands), refer to the upstream [`nomad-distro-dev` README](https://github.com/FAIRmat-NFDI/nomad-distro-dev#readme). This README only covers what is specific to the Area C distribution: which packages it tracks, the local setup with worktrees and package branches, and the protocol for coordinated branches, pull requests, CI, and merging across them.
 
 ## What this distribution tracks
 
@@ -80,8 +80,10 @@ The purpose of this distribution is to make changes that span several repositori
 
 - Open a pull request in each affected package repository (base: its tracked branch, usually `develop`) and one in this repository (base: the starting branch, e.g. `main`).
 - The distro pull request is the coordination point: its description lists and links every package pull request, and each package pull request links back to it.
-- Merge in dependency order, leaves first: package pull requests are merged into their tracked branches, then the distro branch is updated to point the submodules at the resulting commits, and finally the distro pull request is merged.
+- Merge in dependency order, leaves first: package pull requests are merged into their tracked branches, then the distro branch is updated to point the submodules at the resulting commits, and finally the distro pull request is merged. The first two steps are automated by the `Merge coordinated PRs` workflow (see Merging below).
 - Never merge a distro pull request while its submodule pointers still reference branches that have been deleted or rewritten.
+
+**Merging.** The `Merge coordinated PRs` workflow (`.github/workflows/merge-coordinated-prs.yaml`) performs the merge step. Run it from the distro branch of the change (or pass the branch name as input): it finds the package pull requests whose head is that branch, checks that every open one can be merged (targets the default branch, not a draft, no conflicts, checks green, reviews done) and refuses to merge anything otherwise, since merges across repositories are not atomic. It then squash-merges them leaves first, points the submodules at the resulting commits, sets the recorded branches back to the base branches, and pushes that commit to the distro branch. Already merged pull requests count as done, so a run that stopped halfway can be repeated. The `dry_run` input (default on) only reports; the `body` input replaces the squash commit message body of every merged pull request. The distro pull request is then ready for a human to merge. The same logic runs locally as `uv run poe merge-prs <branch> [-n]` with an authenticated `gh`; the workflow needs the `MERGE_TOKEN` secret, a fine-grained PAT that may merge in the package repositories. Branches of the GitLab-hosted packages are reported and must be merged by hand.
 
 **CI verification.** Each package repository runs its own CI when its branch is pushed, so the per-repository checks come for free. To re-run those per-repository checks on demand, this repository provides the `Trigger sub-CI` workflow (`.github/workflows/trigger-sub-ci.yaml`). Run it from the Actions tab or with the CLI:
 
