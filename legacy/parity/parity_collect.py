@@ -20,9 +20,11 @@ import signal
 from pathlib import Path
 from typing import Any
 
+import magic
 from nomad.client import normalize_all
+from nomad.config import config
 from nomad.datamodel import EntryArchive, EntryMetadata
-from nomad.parsing.parsers import match_parser, parsers
+from nomad.parsing.parsers import _compressions, parsers
 from nomad.utils import get_logger
 
 PACKAGES = {
@@ -42,12 +44,19 @@ def _raise_timeout(*_: Any) -> None:
 def candidate_parsers(mode: str) -> list[Any]:
     """Registered parsers of one generation, in NOMAD's matching order.
 
+    The order follows `match_parser`: permissive parsers (e.g. the legacy ABACUS
+    parser) rely on a late `matching_order` and would otherwise claim unrelated files.
     Plugin parsers can come wrapped, so the origin is read from both the class module
     and the entry point id (`electronicparsers:abinit_parser_entry_point`).
     """
+    ordered = (
+        sorted(parsers, key=lambda parser: (parser.matching_order, parser.name))
+        if any(parser.matching_order != 0 for parser in parsers)
+        else parsers
+    )
     return [
         parser
-        for parser in parsers
+        for parser in ordered
         if any(
             package in f'{type(parser).__module__} {parser}'
             for package in PACKAGES[mode]
@@ -56,13 +65,28 @@ def candidate_parsers(mode: str) -> list[Any]:
 
 
 def match(mainfile: str, candidates: list[Any]) -> Any:
+    """The first candidate whose `is_mainfile` accepts the file.
+
+    `match_parser(..., parser_name=...)` forces the named parser without testing it,
+    so the check is done here on the same buffer `match_parser` reads.
+    """
+    with open(mainfile, 'rb') as f:
+        compression, open_compressed = _compressions.get(f.read(3), (None, open))
+    with open_compressed(mainfile, 'rb') as f:
+        buffer = f.read(config.process.parser_matching_size)
+    mime_type = magic.from_buffer(buffer, mime=True)
+    try:
+        decoded_buffer = buffer.decode('utf-8')
+    except UnicodeDecodeError:
+        decoded_buffer = None
     for candidate in candidates:
         try:
-            parser, _ = match_parser(mainfile, parser_name=candidate.name)
+            if candidate.is_mainfile(
+                mainfile, mime_type, buffer, decoded_buffer, compression
+            ):
+                return candidate
         except Exception:
             continue
-        if parser is not None:
-            return parser
     return None
 
 
