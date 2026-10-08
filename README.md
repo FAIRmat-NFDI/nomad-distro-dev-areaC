@@ -39,12 +39,32 @@ uv run poe start   # API + new GUI at http://localhost:8000/nomad-oasis/gui/v2/
 
 Run a package's tests from the workspace with `uv run --directory packages/<package> pytest`.
 
-`git submodule update` checks out the pinned commits with a detached `HEAD`. Two tasks cover the round trip between the checkouts and the recorded pointers (both take `-n` for a dry run):
-
-- `uv run poe track` switches every package to the branch `.gitmodules` declares for it and fast-forwards it to `origin`, leaving alone packages that are on another branch or have uncommitted changes.
-- `uv run poe pin` lists which packages moved away from their pinned commits and commits the new pointers on the current branch, with the list as commit message. It does not push.
-
 Unlike upstream, this distribution commits its `nomad.yaml`. Authentication uses the central NOMAD Keycloak with the `fairdi_nomad_test` realm (shared test users such as `test`/`password`), and the loaded plugins are restricted to the Area C stack through wildcard patterns in `plugins.entry_points.include` (for example `nomad_simulation_parsers.*`), plus the two built-in search apps the GUI uses. Wildcard support in the include/exclude lists landed on `nomad-FAIR`'s `develop` in September 2026, which this distribution tracks.
+
+## Local setup: worktrees and package branches
+
+**Recorded state.** Two things describe which code a distro branch uses. The branch each package follows is recorded in `pyproject.toml` under `[tool.distro.packages]` (mirrored in `.gitmodules`); `uv` ignores this table, since the workspace only knows the folders under `packages/`. The exact commits are the submodule pointers stored in the distro commit (`git ls-tree HEAD packages/`). Three poe tasks move between the checkouts and this record; each takes `-n` for a dry run:
+
+- `uv run poe track` switches every package to its recorded branch and fast-forwards it to `origin`. Packages on another branch, with uncommitted changes, or not initialised are left alone.
+- `uv run poe record` writes the branches currently checked out into `[tool.distro.packages]` and `.gitmodules` (detached packages keep their entry). Review with `git diff` and commit.
+- `uv run poe pin` commits the checked-out commits as submodule pointers, listing what moved in the commit message. It does not push.
+
+For a coordinated change, check out the shared branch in each affected package, run `poe record` and commit, so that `poe track` follows those branches on this distro branch. Run `poe pin` whenever the distro branch should reference an exact state, at the latest before merging, and set the recorded branches back to the tracked ones (`develop` or `main`) before the distro pull request is merged.
+
+**Worktrees.** One clone can hold several distro branches side by side with `git worktree`; each worktree gets its own package checkouts and its own `.venv`:
+
+```bash
+cd nomad-distro-dev-areaC                       # the main clone
+git worktree add -b <initials>/<name> ../<name> main
+cd ../<name>
+git submodule update --init                     # packages at the pinned commits, detached
+uv run poe track                                # packages onto their recorded branches
+uv sync
+```
+
+Initialise the submodules with plain `git` first: `uv run` syncs the workspace before running a task, which fails while `packages/` is empty. Remove a worktree with `git worktree remove ../<name>` once its packages hold no uncommitted work.
+
+**Docker in worktrees.** Docker Compose names its volumes after the directory, so `docker compose up -d` inside a worktree creates a separate, empty set of volumes (`<name>_nomad_mongo`, `<name>_nomad_elastic`, ...). That suits throwaway tests; for uploads and entries that should persist, start the infrastructure from the main clone and use its volumes. Only one stack can run at a time, because the compose file fixes the container names (`nomad_elastic`, `nomad_mongo`, `nomad_temporal`) and ports, so stop the running stack before switching. Remove a worktree's volumes with `docker compose down -v` from that worktree when its tests are done.
 
 ## Coordinated development protocol
 
