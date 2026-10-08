@@ -39,7 +39,10 @@ uv run poe start   # API + new GUI at http://localhost:8000/nomad-oasis/gui/v2/
 
 Run a package's tests from the workspace with `uv run --directory packages/<package> pytest`.
 
-`git submodule update` checks out the pinned commits with a detached `HEAD`. To work on the tracked branches instead, run `scripts/track-branches.sh` (`-n` for a dry run): it switches every package to the branch `.gitmodules` declares for it and fast-forwards it to `origin`, leaving alone packages that are on another branch or have uncommitted changes. The tips are usually ahead of the pinned commits, so `git status` then shows the moved pointers.
+`git submodule update` checks out the pinned commits with a detached `HEAD`. Two tasks cover the round trip between the checkouts and the recorded pointers (both take `-n` for a dry run):
+
+- `uv run poe track` switches every package to the branch `.gitmodules` declares for it and fast-forwards it to `origin`, leaving alone packages that are on another branch or have uncommitted changes.
+- `uv run poe pin` lists which packages moved away from their pinned commits and commits the new pointers on the current branch, with the list as commit message. It does not push.
 
 Unlike upstream, this distribution commits its `nomad.yaml`. Authentication uses the central NOMAD Keycloak with the `fairdi_nomad_test` realm (shared test users such as `test`/`password`), and the loaded plugins are restricted to the Area C stack through wildcard patterns in `plugins.entry_points.include` (for example `nomad_simulation_parsers.*`), plus the two built-in search apps the GUI uses. Wildcard support in the include/exclude lists landed on `nomad-FAIR`'s `develop` in September 2026, which this distribution tracks.
 

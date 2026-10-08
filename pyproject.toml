@@ -63,6 +63,10 @@ md = ["nomad-simulations[md]", "nomad-simulation-parsers[md]"]
 
 [tool.poe.tasks]
 submodule = "git submodule update --init --recursive"
+# Packages onto the branches .gitmodules declares (submodule update leaves them detached); -n for a dry run.
+track = "scripts/track-branches.sh"
+# Record the checked-out package commits as submodule pointers and commit them (no push); -n only lists.
+pin = "scripts/pin-packages.sh"
 docker = "docker compose up -d"
 setup = ["docker", "config"]
 lint = ["ruff-lint", "ruff-format"]

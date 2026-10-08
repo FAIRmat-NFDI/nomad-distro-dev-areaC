@@ -15,7 +15,8 @@ while read -r key path; do
   name=${key#submodule.}; name=${name%.path}
   branch=$(git config -f .gitmodules "submodule.$name.branch" || true)
   if [ -z "$branch" ]; then echo "$path: no branch in .gitmodules, skipped"; continue; fi
-  if ! git -C "$path" rev-parse --git-dir >/dev/null 2>&1; then
+  # An empty folder (not initialised) would resolve to the distro repo itself, so compare toplevels.
+  if [ "$(git -C "$path" rev-parse --show-toplevel 2>/dev/null)" != "$root/$path" ]; then
     echo "$path: not initialised (git submodule update --init), skipped"; continue
   fi
   current=$(git -C "$path" branch --show-current)
