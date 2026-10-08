@@ -77,6 +77,8 @@ submodule = "git submodule update --init --recursive"
 track = "python scripts/packages.py track"
 record = "python scripts/packages.py record"
 pin = "python scripts/packages.py pin"
+# Merge the package pull requests of a coordinated change (README protocol): `poe merge-prs <branch> [-n]`.
+merge-prs = "python scripts/merge_prs.py"
 docker = "docker compose up -d"
 setup = ["docker", "config"]
 lint = ["ruff-lint", "ruff-format"]
