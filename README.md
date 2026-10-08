@@ -28,6 +28,20 @@ NOMAD_SIM_PARSERS_LARGE_FIXTURE_ROOT=$PWD/../nomad-simulation-parser-test-fixtur
   uv run pytest tests -m 'pipeline or large_fixture'
 ```
 
+## Standard setup `std/legacy`
+
+The `std/legacy` branch is a starting base for work that bridges the legacy simulation stack and the one above: comparing what the legacy parsers write to `archive.run` with what the new parsers write to `archive.data`, and maintaining the mapping between the two schemas. On top of `main`, it adds the legacy parsers and the schemas they write as editable workspace members, tracking `develop` (or `master` where no `develop` exists):
+
+| Package | Repository | Form |
+| --- | --- | --- |
+| `nomad-parser-plugins-electronic` | [electronic-parsers](https://github.com/nomad-coe/electronic-parsers) | submodule, editable |
+| `nomad-parser-plugins-atomistic` | [atomistic-parsers](https://github.com/nomad-coe/atomistic-parsers) | submodule, editable |
+| `nomad-parser-plugins-workflow` | [workflow-parsers](https://github.com/nomad-coe/workflow-parsers) | submodule on `master`, editable |
+| `nomad-schema-plugin-run` (`runschema`) | [nomad-schema-plugin-run](https://github.com/nomad-coe/nomad-schema-plugin-run) | submodule, editable |
+| `nomad-schema-plugin-simulation-workflow` (`simulationworkflowschema`) | [nomad-schema-plugin-simulation-workflow](https://github.com/nomad-coe/nomad-schema-plugin-simulation-workflow) | submodule, editable |
+
+Their entry points are added to the `nomad.yaml` include list, so both parser generations are loaded side by side. For files both can read, `match_parser` returns only one of them; select a parser by name when the generation matters. Keep `std/legacy` current by merging `main` into it; changes meant for every setup go to `main` first.
+
 ## Quickstart
 
 ```bash

@@ -13,6 +13,12 @@ dependencies = [
   "nomad-simulation-parsers",
   "nomad-file-parser",
   "nomad-results-normalizer",
+  # std/legacy: legacy parsers and the schemas they write (runschema, simulationworkflowschema)
+  "nomad-parser-plugins-electronic",
+  "nomad-parser-plugins-atomistic",
+  "nomad-parser-plugins-workflow",
+  "nomad-schema-plugin-run",
+  "nomad-schema-plugin-simulation-workflow",
 ]
 
 [tool.uv.workspace]
@@ -30,6 +36,11 @@ nomad-simulations = { workspace = true }
 nomad-simulation-parsers = { workspace = true }
 nomad-file-parser = { workspace = true }
 nomad-results-normalizer = { workspace = true }
+nomad-parser-plugins-electronic = { workspace = true }
+nomad-parser-plugins-atomistic = { workspace = true }
+nomad-parser-plugins-workflow = { workspace = true }
+nomad-schema-plugin-run = { workspace = true }
+nomad-schema-plugin-simulation-workflow = { workspace = true }
 nomad-aitoolkit = { git = "https://github.com/FAIRmat-NFDI/nomad-aitoolkit.git", rev = "b203f8eb28dc4b6771a39d5c5b7ad3d9d8583ac8" }
 nomad-porous-materials = { git = "https://github.com/FAIRmat-NFDI/nomad-porous-materials.git", rev = "522f4a3208077f534f1c5e886527ee2104283d0b" }
 perovskite-solar-cell-database = { git = "https://github.com/FAIRmat-NFDI/nomad-perovskite-solar-cells-database.git", tag = "v0.1.1" }

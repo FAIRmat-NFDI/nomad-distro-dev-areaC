@@ -22,3 +22,23 @@
 	path = packages/nomad-results-normalizer
 	url = https://github.com/FAIRmat-NFDI/nomad-results-normalizer.git
 	branch = main
+[submodule "packages/electronic-parsers"]
+	path = packages/electronic-parsers
+	url = https://github.com/nomad-coe/electronic-parsers.git
+	branch = develop
+[submodule "packages/atomistic-parsers"]
+	path = packages/atomistic-parsers
+	url = https://github.com/nomad-coe/atomistic-parsers.git
+	branch = develop
+[submodule "packages/workflow-parsers"]
+	path = packages/workflow-parsers
+	url = https://github.com/nomad-coe/workflow-parsers.git
+	branch = master
+[submodule "packages/nomad-schema-plugin-run"]
+	path = packages/nomad-schema-plugin-run
+	url = https://github.com/nomad-coe/nomad-schema-plugin-run.git
+	branch = develop
+[submodule "packages/nomad-schema-plugin-simulation-workflow"]
+	path = packages/nomad-schema-plugin-simulation-workflow
+	url = https://github.com/nomad-coe/nomad-schema-plugin-simulation-workflow.git
+	branch = develop

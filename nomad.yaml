@@ -11,6 +11,12 @@ plugins:
       - 'nomad_simulations.*'
       - 'nomad_simulation_parsers.*'
       - 'nomad_results_normalizer.*'
+      # std/legacy: legacy parsers and the runschema/workflow schemas they write
+      - 'electronicparsers:*'
+      - 'atomisticparsers:*'
+      - 'workflowparsers:*'
+      - 'runschema:*'
+      - 'simulationworkflowschema:*'
       # built-in search apps used by the GUI
       - 'apps/1_all/1_entries'
       - 'apps/2_theory/1_calculations'
