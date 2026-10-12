@@ -104,27 +104,51 @@ def walk_legacy(section: Any, prefix: str, paths: set[str]) -> None:
             walk_legacy(child, path, paths)
 
 
-def walk_new(
-    section: Any, ancestors: list[tuple[list[str], list[str]]], paths: set[str]
-) -> None:
-    """Add each filled path below `section`, relative to every enclosing class."""
+Chain = list[tuple[list[str], list[str], bool]]
 
-    def emit(chain: list[tuple[list[str], list[str]]], leaf: str) -> None:
-        for class_names, relative in chain:
+
+def _class_names(section: Any) -> list[str]:
+    return [
+        *(base.name for base in section.m_def.all_base_sections),
+        section.m_def.name,
+    ]
+
+
+def walk_new(section: Any, ancestors: Chain, paths: set[str]) -> None:
+    """Add each filled path below `section`, relative to every enclosing class.
+
+    Steps name sub-sections as declared (`ModelMethod.numerical_settings.k_mesh`). To
+    match targets that select the class held by a sub-section, such as
+    `ModelMethod.numerical_settings[KSpace].k_mesh[KMesh]`, the final step and at most
+    one intermediate step are also emitted with the class, or a base class, of the
+    section they hold. Each chain entry is `(class names, relative steps, qualified)`.
+    """
+
+    def emit(chain: Chain, leaf: str, classes: list[str]) -> None:
+        for class_names, relative, _ in chain:
             for class_name in class_names:
-                paths.add('.'.join([class_name, *relative, leaf]))
+                for suffix in ('', *(f'[{cls}]' for cls in classes)):
+                    paths.add('.'.join([class_name, *relative, leaf + suffix]))
 
-    class_names = [base.name for base in section.m_def.all_base_sections]
-    chain = [*ancestors, ([*class_names, section.m_def.name], [])]
+    chain: Chain = [*ancestors, (_class_names(section), [], False)]
     for quantity in section.m_def.all_quantities.values():
         if section.m_is_set(quantity):
-            emit(chain, quantity.name)
+            emit(chain, quantity.name, [])
     for sub_section in section.m_def.all_sub_sections.values():
         children = section.m_get_sub_sections(sub_section)
-        if children:
-            emit(chain, sub_section.name)
-        nested = [(names, [*relative, sub_section.name]) for names, relative in chain]
+        if not children:
+            continue
+        held = sorted({name for child in children for name in _class_names(child)})
+        emit(chain, sub_section.name, held)
         for child in children:
+            nested: Chain = []
+            for class_names, relative, qualified in chain:
+                nested.append((class_names, [*relative, sub_section.name], qualified))
+                if not qualified:
+                    nested.extend(
+                        (class_names, [*relative, f'{sub_section.name}[{cls}]'], True)
+                        for cls in _class_names(child)
+                    )
             walk_new(child, nested, paths)
 
 

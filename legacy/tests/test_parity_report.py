@@ -4,7 +4,9 @@ from pathlib import Path
 import pytest
 from nomad.datamodel import EntryArchive
 from nomad_simulations.schema_packages.general import Program, Simulation
+from nomad_simulations.schema_packages.model_method import ModelMethod
 from nomad_simulations.schema_packages.model_system import ModelSystem
+from nomad_simulations.schema_packages.numerical_settings import KMesh, KSpace
 from parity_collect import walk_legacy, walk_new
 from parity_report import (
     build_report,
@@ -12,6 +14,7 @@ from parity_report import (
     is_code_specific,
     lookup,
     main,
+    normalize_target,
     parse_mapping_table,
     render_report,
 )
@@ -25,6 +28,7 @@ MAPPING_TABLE = """
 | `system.atoms.lattice_vectors` | Mapped | `ModelSystem.lattice_vectors` | |
 | `calculation.stress.total.value` | Unmapped | — | no stress |
 | `calculation.energy.total` | Partial | `Outputs.total_energies[]` | per-step list |
+| `method.k_mesh` | Mapped | `BaseModelMethod.numerical_settings[KSpace.k_mesh[KMesh]]` | |
 """
 
 
@@ -42,6 +46,37 @@ def test_parse_mapping_table(rows):
     )
     assert rows['calculation.stress.total.value'] == ('Unmapped', None)
     assert rows['calculation.energy.total'] == ('Partial', 'Outputs.total_energies')
+    assert rows['method.k_mesh'] == (
+        'Mapped',
+        'BaseModelMethod.numerical_settings[KSpace].k_mesh[KMesh]',
+    )
+
+
+def test_parse_mapping_table_rejects_duplicates():
+    table = MAPPING_TABLE + '| `run.program.name` | Unmapped | — | again |\n'
+    with pytest.raises(ValueError, match='run.program.name'):
+        parse_mapping_table(table)
+
+
+@pytest.mark.parametrize(
+    'target, expected',
+    [
+        ('ModelSystem.lattice_vectors', 'ModelSystem.lattice_vectors'),
+        ('Potential.parameters[]', 'Potential.parameters'),
+        ('atoms_state.CoreHole.degeneracy', 'CoreHole.degeneracy'),
+        (
+            'BaseModelMethod.numerical_settings[KSpace.k_mesh[KMesh]]',
+            'BaseModelMethod.numerical_settings[KSpace].k_mesh[KMesh]',
+        ),
+        (
+            'ModelMethod.contributions[HubbardInteractions].u_interaction',
+            'ModelMethod.contributions[HubbardInteractions].u_interaction',
+        ),
+    ],
+    ids=['plain', 'repetition', 'module-prefix', 'nested-selector', 'selector'],
+)
+def test_normalize_target(target, expected):
+    assert normalize_target(target) == expected
 
 
 @pytest.mark.parametrize(
@@ -110,6 +145,29 @@ def test_is_code_specific(path, expected):
             'calculation.forces.total.value',
         ),
         ('x_vasp_incar', [], 'code-specific', 'x_vasp_incar'),
+        # a selector-qualified target matches the class-qualified collected path
+        (
+            'method.k_mesh',
+            ['BaseModelMethod.numerical_settings[KSpace].k_mesh[KMesh]'],
+            'parity',
+            'method.k_mesh',
+        ),
+        (
+            'method.k_mesh',
+            ['BaseModelMethod.numerical_settings.k_mesh'],
+            'parser gap',
+            'method.k_mesh → BaseModelMethod.numerical_settings[KSpace].k_mesh[KMesh]',
+        ),
+    ],
+    ids=[
+        'parity',
+        'parity-subpath',
+        'parser-gap',
+        'schema-gap',
+        'unknown',
+        'code-specific',
+        'parity-selector',
+        'parser-gap-unqualified',
     ],
 )
 def test_classify(rows, legacy_path, new_paths, category, item):
@@ -137,6 +195,39 @@ def test_walk_new_class_qualified_paths():
     assert 'Program.name' in paths
     assert 'ModelSystem.is_representative' in paths
     assert 'Simulation.model_system.is_representative' in paths
+
+
+@pytest.mark.parametrize(
+    'path, expected',
+    [
+        ('ModelMethod.numerical_settings.k_mesh', True),
+        ('ModelMethod.numerical_settings[KSpace].k_mesh', True),
+        ('ModelMethod.numerical_settings[NumericalSettings].k_mesh', True),
+        ('ModelMethod.numerical_settings.k_mesh[KMesh]', True),
+        ('ModelMethod.numerical_settings[KSpace].k_mesh[KMesh]', True),
+        ('KSpace.k_mesh[KMesh].grid', True),
+        ('BaseModelMethod.numerical_settings[KSpace].k_mesh.grid', True),
+        # at most one intermediate step carries a selector
+        ('ModelMethod.numerical_settings[KSpace].k_mesh[KMesh].grid', False),
+        ('ModelMethod.numerical_settings[KMesh].k_mesh', False),
+    ],
+    ids=[
+        'plain',
+        'intermediate-selector',
+        'intermediate-base-class',
+        'leaf-selector',
+        'both-selectors',
+        'quantity-below-selector',
+        'base-class-root',
+        'two-intermediate-selectors',
+        'wrong-class',
+    ],
+)
+def test_walk_new_selector_qualified_paths(path, expected):
+    method = ModelMethod(numerical_settings=[KSpace(k_mesh=[KMesh(grid=[2, 2, 2])])])
+    paths: set[str] = set()
+    walk_new(method, [], paths)
+    assert (path in paths) is expected
 
 
 def test_walk_legacy_relative_paths():

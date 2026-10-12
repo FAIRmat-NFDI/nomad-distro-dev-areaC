@@ -54,8 +54,18 @@ def _family(section: Any, index: dict[str, Any]) -> list[Any]:
     ]
 
 
+def _is_a(section: Any, declared: Any) -> bool:
+    return section.name == declared.name or declared.name in {
+        base.name for base in section.all_base_sections
+    }
+
+
 def resolve(section: Any, steps: list[str], index: dict[str, Any]) -> bool:
-    """Whether `steps` lead from `section` to a quantity, sub-section or attribute."""
+    """Whether `steps` lead from `section` to a quantity, sub-section or attribute.
+
+    A selector (`contributions[HubbardInteractions]`) must name the declared
+    sub-section type or one of its subclasses.
+    """
     if not steps:
         return True
     step, rest = steps[0], steps[1:]
@@ -67,23 +77,16 @@ def resolve(section: Any, steps: list[str], index: dict[str, Any]) -> bool:
     name, selector = match.groups()
     for candidate in _family(section, index):
         if name in candidate.all_sub_sections:
-            target = (
-                index.get(selector)
-                if selector
-                else candidate.all_sub_sections[name].sub_section
-            )
-            if target is not None and resolve(target, rest, index):
+            declared = candidate.all_sub_sections[name].sub_section
+            target = index.get(selector) if selector else declared
+            if target is None or not _is_a(target, declared):
+                continue
+            if resolve(target, rest, index):
                 return True
         elif name in candidate.all_quantities or hasattr(candidate.section_cls, name):
             if not rest:
                 return True
     return False
-
-
-def _normalize_target(target: str) -> str:
-    target = re.sub(r'^[a-z_]+\.(?=[A-Z])', '', target)  # `atoms_state.CoreHole`
-    # `settings[KSpace.k_mesh[KMesh]]` -> `settings[KSpace].k_mesh[KMesh]`
-    return re.sub(r'\[(\w+)\.(\w+)\[(\w+)\]\]', r'[\1].\2[\3]', target)
 
 
 def check_table(
@@ -105,7 +108,7 @@ def check_table(
         if not found:
             bad_sources.append(source)
         if target and status != 'Unmapped':
-            steps = _normalize_target(target).split('.')
+            steps = target.split('.')
             root = new_index.get(steps[0])
             if root is None or not resolve(root, steps[1:], new_index):
                 bad_targets.append(f'{source} -> {target}')

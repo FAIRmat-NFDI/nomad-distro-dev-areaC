@@ -303,11 +303,6 @@ as a starting point for schema-coverage discussion.
 | `method.force_field.force_calculations.neighbor_searching` | Partial | `ForceCalculations` (fields inlined) | Legacy `NeighborSearching` subsection; modern inlines its fields onto `ForceCalculations`. |
 | `method.force_field.force_calculations.neighbor_searching.neighbor_update_frequency` | Mapped | `ForceCalculations.neighbor_update_frequency` | Inlined. |
 | `method.force_field.force_calculations.neighbor_searching.neighbor_update_cutoff` | Mapped | `ForceCalculations.neighbor_update_cutoff` | Inlined. |
-| `method.photon` | Partial | `Photon` (ArchiveSection) | Modern `Photon` exists but is used by excited-state methods (BSE), out of core scope. |
-| `method.photon.multipole_type` | Mapped | `Photon.multipole_type` | |
-| `method.photon.polarization` | Mapped | `Photon.polarization` | |
-| `method.photon.energy` | Mapped | `Photon.energy` | |
-| `method.photon.momentum_transfer` | Mapped | `Photon.momentum_transfer` | |
 
 ## Method (correlated / beyond-DFT) → ModelMethod
 
@@ -369,7 +364,8 @@ as a starting point for schema-coverage discussion.
 | `method.core_hole.solver` | Unmapped | — | Modern `CoreHoleSpectra` `solver` is commented out; no equivalent quantity. |
 | `method.core_hole.edge` | Mapped | `CoreHoleSpectra.edge` | Same MEnum edge labels; modern resolves from `core_hole_ref`. |
 | `method.core_hole.mode` | Mapped | `CoreHoleSpectra.type` | Legacy `mode` ('absorption'/'emission') → modern `type`. |
-| `method.core_hole.broadening` | Partial | `ExcitedStateMethodology.broadening` (via `CoreHoleSpectra` inheritance chain) | Modern `CoreHoleSpectra(ModelMethodElectronic)` does not inherit `ExcitedStateMethodology`, so no `broadening`; nearest is generic excited-state broadening on other sections. |
+| `method.core_hole.broadening` | Unmapped | — | Modern `CoreHoleSpectra(ModelMethodElectronic)` does not inherit `ExcitedStateMethodology`, so there is no `broadening` slot. |
+| `method.photon` | Partial | `Photon` (ArchiveSection) | Modern `Photon` exists but is used by excited-state methods (BSE), out of core scope. |
 | `method.photon.multipole_type` | Partial | `Photon.multipole_type` | Legacy is free `str`; modern is MEnum ('dipolar','quadrupolar','NRIXS','Raman'). |
 | `method.photon.polarization` | Mapped | `Photon.polarization` | |
 | `method.photon.energy` | Mapped | `Photon.energy` | |
@@ -411,11 +407,6 @@ as a starting point for schema-coverage discussion.
 | `method.gw.screening.frequency_mesh` | Unmapped | — | `FrequencyMesh` not implemented. |
 | `method.frequency_mesh` | Unmapped | — | `FrequencyMesh` not implemented in nomad-simulations. |
 | `method.time_mesh` | Unmapped | — | `TimeMesh` not implemented in nomad-simulations. |
-| `method.force_field.force_calculations.neighbor_searching.neighbor_update_frequency` | Unmapped | — | MD force-calculation neighbor settings have no equivalent in `nomad_simulations` `force_field.py`/`model_method.py`. |
-| `method.force_field.force_calculations.neighbor_searching.neighbor_update_cutoff` | Unmapped | — | See above. |
-| `method.force_field.force_calculations.vdw_cutoff` | Unmapped | — | No `ForceCalculations` equivalent in nomad-simulations. |
-| `method.force_field.force_calculations.coulomb_type` | Unmapped | — | See above. |
-| `method.force_field.force_calculations.coulomb_cutoff` | Unmapped | — | See above. |
 | `AtomParameters.core_hole.n_quantum_number` | Mapped | `atoms_state.CoreHole.spin_orbit_state[SphericalSymmetryState].n_quantum_number` | `CoreHole(SingleElectronState)` state definition. |
 | `AtomParameters.core_hole.l_quantum_number` | Mapped | `atoms_state.CoreHole` → `SphericalSymmetryState.l_quantum_number` | |
 | `AtomParameters.core_hole.ml_quantum_number` | Mapped | `atoms_state.CoreHole` → `SphericalSymmetryState.ml_quantum_number` | |

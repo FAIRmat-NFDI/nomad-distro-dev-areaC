@@ -18,6 +18,9 @@ def index():
         ('ModelSystem.local_symmetry.wyckoff_letters', True),
         ('ModelMethod.contributions[HubbardInteractions].u_interaction', True),
         ('ModelMethod.contributions[NoSuchSection].u_interaction', False),
+        # the selector must be the declared sub-section type or a subclass of it
+        ('ModelMethod.contributions[Program].name', False),
+        ('ModelMethod.numerical_settings[KSpace].k_mesh[KMesh].grid', True),
         ('SlaterKoster.bonds[SlaterKosterBond].orbital_1/orbital_2', True),
         ('SlaterKoster.bonds[SlaterKosterBond].orbital_1/no_such_orbital', False),
         ('Potential.contributions', False),

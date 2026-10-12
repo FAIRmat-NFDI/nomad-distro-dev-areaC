@@ -24,12 +24,25 @@ def _strip(path: str) -> str:
     return path.replace('[]', '').strip()
 
 
+def normalize_target(target: str) -> str:
+    """Reduce a target path to the spelling `parity_collect.py` emits.
+
+    Drops a module prefix (`atoms_state.CoreHole`), hoists a nested selector
+    (`settings[KSpace.k_mesh[KMesh]]` -> `settings[KSpace].k_mesh[KMesh]`) and
+    removes the repetition marker `[]`.
+    """
+    target = re.sub(r'^[a-z_]+\.(?=[A-Z])', '', target.strip())
+    target = re.sub(r'\[(\w+)\.(\w+)\[(\w+)\]\]', r'[\1].\2[\3]', target)
+    return _strip(target)
+
+
 def parse_mapping_table(text: str) -> dict[str, tuple[str, str | None]]:
     """Return `{runschema path: (status, target)}` from the mapping table Markdown.
 
     The target is the first code span of the target cell, so qualifiers such as
     `` `ModelSystem.lattice_vectors` (`Representation.lattice_vectors`) `` reduce to
-    the first path.
+    the first path. A source path listed twice raises `ValueError`, since the later
+    row would silently replace the earlier one.
     """
     rows: dict[str, tuple[str, str | None]] = {}
     for raw_line in text.splitlines():
@@ -37,11 +50,11 @@ def parse_mapping_table(text: str) -> dict[str, tuple[str, str | None]]:
         if not line.startswith('| `'):
             continue
         cells = [cell.strip() for cell in line.strip('|').split(' | ')]
+        source = _strip(cells[0].strip('`'))
+        if source in rows:
+            raise ValueError(f'duplicate mapping row for `{source}`')
         targets = re.findall(r'`([^`]+)`', cells[2])
-        rows[_strip(cells[0].strip('`'))] = (
-            cells[1],
-            _strip(targets[0]) if targets else None,
-        )
+        rows[source] = (cells[1], normalize_target(targets[0]) if targets else None)
     return rows
 
 
