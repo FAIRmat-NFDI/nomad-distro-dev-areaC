@@ -3,7 +3,8 @@
 A coordinated change uses one branch name across the package repositories and this distro (see "Coordinated
 development protocol" in the README). This script performs the merge step of that protocol:
 
-1. Find, for every GitHub-hosted package, the pull request whose head is the shared branch.
+1. Find, for every GitHub-hosted package, the pull request whose head is the shared branch in that
+   repository (not a fork). A package that the distro records on the shared branch must have one.
 2. Check that every open one can be merged: targets the repository's default branch, not a draft, no
    conflicts, checks green, no review pending or changes requested. A closed but unmerged pull request
    blocks as well. If any fails, nothing is merged: the merges across repositories are not atomic, so they
@@ -42,8 +43,8 @@ ORDER = [
     "nomad-results-normalizer",
 ]
 PR_FIELDS = (
-    "number,state,title,body,url,baseRefName,headRefOid,isDraft,mergeable,mergeStateStatus,"
-    "reviewDecision,mergeCommit,statusCheckRollup"
+    "number,state,title,body,url,baseRefName,headRefOid,headRepositoryOwner,isDraft,mergeable,"
+    "mergeStateStatus,reviewDecision,mergeCommit,statusCheckRollup"
 )
 
 
@@ -74,7 +75,10 @@ def packages_by_repo(root: Path) -> tuple[dict[str, str], list[str]]:
 
 
 def find_pr(repo: str, branch: str) -> dict | None:
-    """The open pull request from `branch`, else the merged one, else the closed one, else None."""
+    """The open pull request from `branch`, else the merged one, else the closed one, else None.
+
+    Only heads in the repository itself count: a fork may carry a branch of the same name.
+    """
     for attempt in range(5):
         prs = json.loads(
             gh(
@@ -82,6 +86,9 @@ def find_pr(repo: str, branch: str) -> dict | None:
                 "--state", "all", "--limit", "20", "--json", PR_FIELDS,
             )
         )  # fmt: skip
+        prs = [
+            pr for pr in prs if (pr["headRepositoryOwner"] or {}).get("login") == OWNER
+        ]
         pr = next(
             (
                 pr
@@ -260,6 +267,7 @@ def main() -> int:
         )
     warn_other_hosts(other, args.branch)
 
+    recorded = recorded_branches(root)
     found: list[tuple[str, dict]] = []
     blocked = 0
     for repo in ORDER:
@@ -267,7 +275,14 @@ def main() -> int:
             continue
         pr = find_pr(repo, args.branch)
         if pr is None:
-            print(f"{repo}: no pull request from {args.branch}")
+            if recorded.get(Path(github[repo]).name) == args.branch:
+                # the distro pins this package to the shared branch, so its commits are unmerged
+                print(
+                    f"{repo}: blocked: recorded on {args.branch} but has no pull request from it"
+                )
+                blocked += 1
+            else:
+                print(f"{repo}: no pull request from {args.branch}")
             continue
         found.append((repo, pr))
         tracked = default_branch(repo)

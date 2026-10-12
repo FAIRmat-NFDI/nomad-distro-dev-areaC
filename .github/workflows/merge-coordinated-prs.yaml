@@ -53,6 +53,7 @@ jobs:
           BODY: ${{ inputs.body }}
           DRY_RUN: ${{ inputs.dry_run }}
         run: |
+          set -o pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           args=()
