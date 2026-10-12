@@ -16,13 +16,13 @@ Each runschema leaf filled by a legacy parser is translated with the runschema m
 | exciting | 12/12 | 22 | 38 | 9 | 9 | 93 |
 | fhiaims | 1/1 | 28 | 20 | 8 | 11 | 46 |
 | gpaw | 1/1 | 13 | 13 | 4 | 1 | 13 |
-| gromacs | 8/8 | 26 | 36 | 7 | 6 | 17 |
+| gromacs | 8/8 | 30 | 37 | 2 | 6 | 17 |
 | h5md | 0/1 | 0 | 0 | 0 | 0 | 0 |
-| lammps | 10/11 | 13 | 34 | 7 | 3 | 52 |
+| lammps | 10/11 | 13 | 39 | 2 | 3 | 52 |
 | lobster | 7/7 | 28 | 24 | 13 | 4 | 65 |
 | octopus | 1/1 | 8 | 25 | 5 | 0 | 25 |
 | phonopy | 1/1 | 0 | 12 | 0 | 5 | 7 |
-| quantumespresso | 12/12 | 16 | 34 | 11 | 1 | 245 |
+| quantumespresso | 12/12 | 16 | 33 | 12 | 1 | 245 |
 | vasp | 1/2 | 24 | 18 | 10 | 4 | 4 |
 | wannier90 | 1/1 | 19 | 15 | 7 | 0 | 2 |
 
@@ -273,7 +273,7 @@ Each runschema leaf filled by a legacy parser is translated with the runschema m
 
 ## gromacs
 
-**Parser gap** (36)
+**Parser gap** (37)
 
 - `calculation.density → MassDensity.value`
 - `calculation.energy.kinetic.value → Outputs.kinetic_energies.value`
@@ -287,6 +287,7 @@ Each runschema leaf filled by a legacy parser is translated with the runschema m
 - `method.atom_parameters.charge → AtomsState.charge`
 - `method.atom_parameters.label → AtomsState.label`
 - `method.atom_parameters.mass → ParticleState.mass`
+- `method.force_field.force_calculations.neighbor_searching.neighbor_update_cutoff → ForceCalculations.neighbor_update_cutoff`
 - `method.force_field.model → ForceField.contributions`
 - `method.force_field.model.contributions.atom_indices → Potential.particle_indices`
 - `method.force_field.model.contributions.atom_labels → Potential.particle_labels`
@@ -312,14 +313,9 @@ Each runschema leaf filled by a legacy parser is translated with the runschema m
 - `system.atoms_group.n_atoms → ModelSystem.sub_systems.n_particles`
 - `system.atoms_group.type → ModelSystem.sub_systems.type`
 
-**Schema gap** (7)
+**Schema gap** (2)
 
 - `calculation.pressure_tensor`
-- `method.force_field.force_calculations.coulomb_cutoff`
-- `method.force_field.force_calculations.coulomb_type`
-- `method.force_field.force_calculations.neighbor_searching.neighbor_update_cutoff`
-- `method.force_field.force_calculations.neighbor_searching.neighbor_update_frequency`
-- `method.force_field.force_calculations.vdw_cutoff`
 - `system.atoms_group.is_molecule`
 
 **Unknown** (6)
@@ -345,7 +341,7 @@ Each runschema leaf filled by a legacy parser is translated with the runschema m
 
 - skipped `lammps/2_xyz_files/log.lammps`: new: TypeError: unsupported operand type(s) for *: 'NoneType' and 'int'
 
-**Parser gap** (34)
+**Parser gap** (39)
 
 - `calculation.energy.contributions.value → Outputs.total_energies.contributions.value`
 - `calculation.energy.current.value → Outputs.total_energies.value`
@@ -360,7 +356,12 @@ Each runschema leaf filled by a legacy parser is translated with the runschema m
 - `calculation.time_physical → Outputs.wall_end`
 - `method.atom_parameters.charge → AtomsState.charge`
 - `method.atom_parameters.mass → ParticleState.mass`
+- `method.force_field.force_calculations.coulomb_cutoff → ForceCalculations.coulomb_cutoff`
+- `method.force_field.force_calculations.coulomb_type → ForceCalculations.coulomb_type`
 - `method.force_field.force_calculations.neighbor_searching → ForceCalculations`
+- `method.force_field.force_calculations.neighbor_searching.neighbor_update_cutoff → ForceCalculations.neighbor_update_cutoff`
+- `method.force_field.force_calculations.neighbor_searching.neighbor_update_frequency → ForceCalculations.neighbor_update_frequency`
+- `method.force_field.force_calculations.vdw_cutoff → ForceCalculations.vdw_cutoff`
 - `method.force_field.model → ForceField.contributions`
 - `method.force_field.model.contributions.atom_indices → Potential.particle_indices`
 - `method.force_field.model.contributions.atom_labels → Potential.particle_labels`
@@ -382,14 +383,9 @@ Each runschema leaf filled by a legacy parser is translated with the runschema m
 - `system.atoms_group.n_atoms → ModelSystem.sub_systems.n_particles`
 - `system.atoms_group.type → ModelSystem.sub_systems.type`
 
-**Schema gap** (7)
+**Schema gap** (2)
 
 - `calculation.radius_of_gyration.kind`
-- `method.force_field.force_calculations.coulomb_cutoff`
-- `method.force_field.force_calculations.coulomb_type`
-- `method.force_field.force_calculations.neighbor_searching.neighbor_update_cutoff`
-- `method.force_field.force_calculations.neighbor_searching.neighbor_update_frequency`
-- `method.force_field.force_calculations.vdw_cutoff`
 - `system.atoms_group.is_molecule`
 
 **Unknown** (3)
@@ -515,7 +511,7 @@ Each runschema leaf filled by a legacy parser is translated with the runschema m
 
 ## quantumespresso
 
-**Parser gap** (34)
+**Parser gap** (33)
 
 - `calculation.scf_iteration.time_calculation → Outputs.scf_steps.durations`
 - `calculation.spectra.excitation_energies → Outputs.absorption_spectra.energies.points`
@@ -527,7 +523,6 @@ Each runschema leaf filled by a legacy parser is translated with the runschema m
 - `calculation.time_physical → Outputs.wall_end`
 - `method.atom_parameters.label → AtomsState.label`
 - `method.atom_parameters.n_valence_electrons → Pseudopotential.n_valence_electrons`
-- `method.core_hole.broadening → ExcitedStateMethodology.broadening`
 - `method.core_hole.mode → CoreHoleSpectra.type`
 - `method.electronic.method → ModelMethod.name`
 - `method.electronic.n_spin_channels → ModelMethodElectronic.is_spin_polarized`
@@ -552,7 +547,7 @@ Each runschema leaf filled by a legacy parser is translated with the runschema m
 - `system.atoms.periodic → ModelSystem.periodic_boundary_conditions`
 - `system.atoms.positions → ModelSystem.positions`
 
-**Schema gap** (11)
+**Schema gap** (12)
 
 - `calculation.energy.fermi`
 - `calculation.energy.highest_occupied`
@@ -561,6 +556,7 @@ Each runschema leaf filled by a legacy parser is translated with the runschema m
 - `calculation.spectra.intensities_units`
 - `calculation.stress.total.value`
 - `calculation.vibrational_frequencies.value`
+- `method.core_hole.broadening`
 - `method.core_hole.solver`
 - `method.electronic.n_electrons`
 - `method.electronic.smearing.width`
