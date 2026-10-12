@@ -5,17 +5,18 @@ development protocol" in the README). This script performs the merge step of tha
 
 1. Find, for every GitHub-hosted package, the pull request whose head is the shared branch.
 2. Check that every open one can be merged: targets the repository's default branch, not a draft, no
-   conflicts, checks green, no review pending or changes requested.
-   If any fails, nothing is merged: the merges across repositories are not atomic, so they only start when
-   all of them can go through.
-3. Squash-merge them in dependency order, leaves first. Already merged pull requests count as done, so a run
-   that stopped halfway can simply be repeated.
+   conflicts, checks green, no review pending or changes requested. A closed but unmerged pull request
+   blocks as well. If any fails, nothing is merged: the merges across repositories are not atomic, so they
+   only start when all of them can go through.
+3. Squash-merge them in dependency order, leaves first, each pinned to the head commit that passed the
+   checks. Already merged pull requests (into the default branch) count as done, so a run that stopped
+   halfway can simply be repeated.
 4. In the distro checkout, point each package's submodule at the resulting commit on its base branch and
    record that base branch in [tool.distro.packages] and .gitmodules, then commit. Nothing is pushed.
 
     python scripts/merge_prs.py <branch> [-n] [--body TEXT | --body-file FILE]
 
--n only reports what would happen. The body replaces the squash commit message body of every merged pull
+Run it from a clean checkout of the distro branch of the same name. -n only reports what would happen. The body replaces the squash commit message body of every merged pull
 request (default: the pull request description); the subject is always "<title> (#<number>)". Needs the `gh`
 CLI authenticated as a user who may merge in the package repositories (GH_TOKEN in CI).
 """
@@ -41,7 +42,7 @@ ORDER = [
     "nomad-results-normalizer",
 ]
 PR_FIELDS = (
-    "number,state,title,body,url,baseRefName,isDraft,mergeable,mergeStateStatus,"
+    "number,state,title,body,url,baseRefName,headRefOid,isDraft,mergeable,mergeStateStatus,"
     "reviewDecision,mergeCommit,statusCheckRollup"
 )
 
@@ -73,7 +74,7 @@ def packages_by_repo(root: Path) -> tuple[dict[str, str], list[str]]:
 
 
 def find_pr(repo: str, branch: str) -> dict | None:
-    """The open pull request from `branch`, else the merged one, else None."""
+    """The open pull request from `branch`, else the merged one, else the closed one, else None."""
     for attempt in range(5):
         prs = json.loads(
             gh(
@@ -82,7 +83,12 @@ def find_pr(repo: str, branch: str) -> dict | None:
             )
         )  # fmt: skip
         pr = next(
-            (pr for state in ("OPEN", "MERGED") for pr in prs if pr["state"] == state),
+            (
+                pr
+                for state in ("OPEN", "MERGED", "CLOSED")
+                for pr in prs
+                if pr["state"] == state
+            ),
             None,
         )
         # GitHub computes mergeability lazily; the first query after a push may return UNKNOWN.
@@ -138,6 +144,8 @@ def merge(repo: str, pr: dict, body: str | None) -> str:
         f"{pr['title']} (#{pr['number']})",
         "--body",
         body if body is not None else (pr["body"] or ""),
+        "--match-head-commit",
+        pr["headRefOid"],
     ]
     gh(*args)
     for _ in range(30):
@@ -191,7 +199,7 @@ def update_distro(
         git("submodule", "set-branch", "-b", base, "--", path, cwd=root)
         recorded[key] = base
     if not changed:
-        print("Distro already up to date.")
+        print("Distro pointers already up to date.")
         return
     if dry:
         return
@@ -232,6 +240,18 @@ def main() -> int:
     body = args.body_file.read_text() if args.body_file else args.body
 
     root = Path(git("rev-parse", "--show-toplevel", cwd=Path.cwd()))
+    current = git("branch", "--show-current", cwd=root)
+    if current != args.branch:
+        raise SystemExit(
+            f"the distro checkout is on {current or 'a detached HEAD'}, not {args.branch}; "
+            "check out the distro branch of the coordinated change first"
+        )
+    if git(
+        "status", "--porcelain", "--untracked-files=no", "--ignore-submodules", cwd=root
+    ):
+        raise SystemExit(
+            "the distro checkout has uncommitted changes; commit or stash them first"
+        )
     github, other = packages_by_repo(root)
     unknown = sorted(set(github) - set(ORDER))
     if unknown:
@@ -250,12 +270,25 @@ def main() -> int:
             print(f"{repo}: no pull request from {args.branch}")
             continue
         found.append((repo, pr))
+        tracked = default_branch(repo)
         if pr["state"] == "MERGED":
-            print(
-                f"{repo}#{pr['number']}: already merged into {pr['baseRefName']} as {pr['mergeCommit']['oid'][:7]}"
-            )
+            if pr["baseRefName"] == tracked:
+                print(
+                    f"{repo}#{pr['number']}: already merged into {tracked} as {pr['mergeCommit']['oid'][:7]}"
+                )
+            else:
+                print(
+                    f"{repo}#{pr['number']}: blocked: merged into {pr['baseRefName']}, not {tracked}  {pr['url']}"
+                )
+                blocked += 1
             continue
-        problems = blockers(pr, default_branch(repo))
+        if pr["state"] == "CLOSED":
+            print(
+                f"{repo}#{pr['number']}: blocked: closed without merging  {pr['url']}"
+            )
+            blocked += 1
+            continue
+        problems = blockers(pr, tracked)
         state = "blocked: " + ", ".join(problems) if problems else "ready"
         print(f"{repo}#{pr['number']} -> {pr['baseRefName']}: {state}  {pr['url']}")
         blocked += bool(problems)
@@ -267,11 +300,15 @@ def main() -> int:
         return 1
 
     merged: dict[str, tuple[str, int, str, str]] = {}
+    pending = 0
     for repo, pr in found:
         if pr["state"] == "MERGED":
             commit = pr["mergeCommit"]["oid"]
         elif args.dry_run:
-            print(f"{repo}#{pr['number']}: would squash-merge into {pr['baseRefName']}")
+            print(
+                f"{repo}#{pr['number']}: would squash-merge {pr['headRefOid'][:7]} into {pr['baseRefName']}"
+            )
+            pending += 1
             continue
         else:
             commit = merge(repo, pr, body)
@@ -279,7 +316,12 @@ def main() -> int:
                 f"{repo}#{pr['number']}: merged into {pr['baseRefName']} as {commit[:7]}"
             )
         merged[github[repo]] = (repo, pr["number"], pr["baseRefName"], commit)
-    update_distro(root, merged, args.dry_run)
+    if pending:
+        print(
+            f"{pending} pull request(s) would be merged; their pointer updates can only be computed afterwards."
+        )
+    if merged:
+        update_distro(root, merged, args.dry_run)
     return 0
 
 

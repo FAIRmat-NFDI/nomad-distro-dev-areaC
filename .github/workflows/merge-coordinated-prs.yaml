@@ -9,9 +9,12 @@ name: Merge coordinated PRs
 # distro branch of the coordinated change (Actions tab: "Use workflow from").
 # The logic lives in scripts/merge_prs.py, which also runs locally.
 #
-# Requires the `MERGE_TOKEN` secret: a fine-grained PAT of a user who may merge
-# in the package repositories (`pull_requests: write`, `contents: write` on
-# each). Branch protection of the package repositories still applies.
+# Requires the `MERGE_TOKEN` secret of the `package-repos` environment: a
+# fine-grained PAT of a user who may merge in the package repositories
+# (`pull_requests: write`, `contents: write` on each). The environment requires
+# a reviewer's approval before the job (and the token) is released, because
+# the job runs this script from the dispatched branch. Branch protection of the
+# package repositories still applies.
 # GitLab-hosted packages (nomad-FAIR, nomad-gui) are reported, not merged.
 
 on:
@@ -36,6 +39,7 @@ permissions:
 jobs:
   merge:
     runs-on: ubuntu-latest
+    environment: package-repos
     env:
       BRANCH: ${{ inputs.branch || github.ref_name }}
     steps:
