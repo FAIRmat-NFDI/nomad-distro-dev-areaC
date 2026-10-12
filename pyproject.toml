@@ -35,6 +35,16 @@ nomad-porous-materials = { git = "https://github.com/FAIRmat-NFDI/nomad-porous-m
 perovskite-solar-cell-database = { git = "https://github.com/FAIRmat-NFDI/nomad-perovskite-solar-cells-database.git", tag = "v0.1.1" }
 nomad-external-eln-integrations = { git = "https://github.com/FAIRmat-NFDI/nomad-external-eln-integrations", rev = "de8050effb510fc2be0974cb08d44b475791b0a5" }
 
+[tool.distro.packages]
+# Branch each package under packages/ follows (uv ignores this table). Read by `poe track`,
+# written by `poe record`; the exact commits are the submodule pointers (`poe pin`).
+"nomad-FAIR" = "develop"
+"nomad-simulations" = "develop"
+"nomad-file-parser" = "develop"
+"nomad-simulation-parsers" = "develop"
+"nomad-simulation-parser-test-fixtures" = "main"
+"nomad-results-normalizer" = "main"
+
 [tool.uv]
 extra-index-url = [
   "https://gitlab.mpcdf.mpg.de/api/v4/projects/2187/packages/pypi/simple",
@@ -63,6 +73,10 @@ md = ["nomad-simulations[md]", "nomad-simulation-parsers[md]"]
 
 [tool.poe.tasks]
 submodule = "git submodule update --init --recursive"
+# Package checkouts <-> recorded state ([tool.distro.packages], submodule pointers); -n for a dry run.
+track = "python scripts/packages.py track"
+record = "python scripts/packages.py record"
+pin = "python scripts/packages.py pin"
 docker = "docker compose up -d"
 setup = ["docker", "config"]
 lint = ["ruff-lint", "ruff-format"]
