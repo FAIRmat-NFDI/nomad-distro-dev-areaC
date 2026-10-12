@@ -13,6 +13,7 @@ from parity_report import (
     classify,
     is_code_specific,
     lookup,
+    alternatives,
     main,
     normalize_target,
     parse_mapping_table,
@@ -29,6 +30,7 @@ MAPPING_TABLE = """
 | `calculation.stress.total.value` | Unmapped | — | no stress |
 | `calculation.energy.total` | Partial | `Outputs.total_energies[]` | per-step list |
 | `method.k_mesh` | Mapped | `BaseModelMethod.numerical_settings[KSpace.k_mesh[KMesh]]` | |
+| `method.tb.bond.orbital` | Mapped | `SlaterKoster.bonds.orbital_1/orbital_2` | either |
 """
 
 
@@ -77,6 +79,22 @@ def test_parse_mapping_table_rejects_duplicates():
 )
 def test_normalize_target(target, expected):
     assert normalize_target(target) == expected
+
+
+@pytest.mark.parametrize(
+    'target, expected',
+    [
+        ('SlaterKoster.bonds.orbital_1', ['SlaterKoster.bonds.orbital_1']),
+        (
+            'SlaterKoster.bonds.orbital_1/orbital_2',
+            ['SlaterKoster.bonds.orbital_1', 'SlaterKoster.bonds.orbital_2'],
+        ),
+        ('a/b', ['a', 'b']),
+    ],
+    ids=['single', 'last-step', 'root-only'],
+)
+def test_alternatives(target, expected):
+    assert alternatives(target) == expected
 
 
 @pytest.mark.parametrize(
@@ -158,6 +176,19 @@ def test_is_code_specific(path, expected):
             'parser gap',
             'method.k_mesh → BaseModelMethod.numerical_settings[KSpace].k_mesh[KMesh]',
         ),
+        # any alternative of the last step counts
+        (
+            'method.tb.bond.orbital',
+            ['SlaterKoster.bonds.orbital_2'],
+            'parity',
+            'method.tb.bond.orbital',
+        ),
+        (
+            'method.tb.bond.orbital',
+            ['SlaterKoster.bonds.name'],
+            'parser gap',
+            'method.tb.bond.orbital → SlaterKoster.bonds.orbital_1/orbital_2',
+        ),
     ],
     ids=[
         'parity',
@@ -168,6 +199,8 @@ def test_is_code_specific(path, expected):
         'code-specific',
         'parity-selector',
         'parser-gap-unqualified',
+        'parity-alternative',
+        'parser-gap-no-alternative',
     ],
 )
 def test_classify(rows, legacy_path, new_paths, category, item):

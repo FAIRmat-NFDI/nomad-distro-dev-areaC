@@ -75,6 +75,20 @@ def lookup(
     return None
 
 
+def alternatives(target: str) -> list[str]:
+    """Expand alternatives in the last step (`bonds.orbital_1/orbital_2`) into full paths."""
+    head, _, last = target.rpartition('.')
+    return [f'{head}.{alt}' if head else alt for alt in last.split('/')]
+
+
+def is_filled(target: str, filled: set[str]) -> bool:
+    """Whether the new parser fills any alternative of `target` or anything below it."""
+    return any(
+        alt in filled or any(p.startswith(f'{alt}.') for p in filled)
+        for alt in alternatives(target)
+    )
+
+
 def is_code_specific(path: str) -> bool:
     """Code-specific `x_` quantities and archive references are outside the table."""
     return any(part.startswith('x_') for part in path.split('.')) or path.endswith(
@@ -103,7 +117,7 @@ def classify(
         key, (status, target) = match
         if status == 'Unmapped' or not target:
             categories['schema gap'].add(key)
-        elif target in filled or any(p.startswith(f'{target}.') for p in filled):
+        elif is_filled(target, filled):
             categories['parity'].add(key)
         else:
             categories['parser gap'].add(f'{key} → {target}')
@@ -172,7 +186,10 @@ def render_report(
         skipped = [(f, error) for f, error in files[code] if error]
         if skipped:
             lines.append('')
-            lines += [f'- skipped `{f}`: {error}' for f, error in skipped]
+            # collections made before the collector collapsed whitespace may hold newlines
+            lines += [
+                f'- skipped `{f}`: {" ".join(error.split())}' for f, error in skipped
+            ]
         for category in DETAILED_CATEGORIES:
             items = sorted(per_code[code][category])
             if items:

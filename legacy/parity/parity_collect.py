@@ -201,7 +201,8 @@ def collect(
                         walk_new(archive.data, [], paths)
                     entry['paths'] = sorted(paths)
                 except Exception as e:
-                    entry['error'] = f'{type(e).__name__}: {e}'[:200]
+                    # one line, so that the report keeps each skipped file in one list item
+                    entry['error'] = ' '.join(f'{type(e).__name__}: {e}'.split())[:200]
                 finally:
                     signal.alarm(0)
                 results.append(entry)

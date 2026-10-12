@@ -230,7 +230,7 @@ as a starting point for schema-coverage discussion.
 | `method.atom_parameters.onsite_energies` | Unmapped | — | Per-orbital onsite energies not on `AtomsState` (TB-specific, out of scope). |
 | `method.atom_parameters.charge` | Partial | `AtomsState.charge` / `ParticleParameters.partial_charge` | Legacy total atom charge (coulomb); modern formal integer charge or FF partial charge. |
 | `method.atom_parameters.charges` | Unmapped | — | Per-orbital charge array not represented. |
-| `method.atom_parameters.hubbard_kanamori_model` | Unmapped | — | Hubbard/many-body handled by the correlated-methods agent (`HubbardInteractions`). |
+| `method.atom_parameters.hubbard_kanamori_model` | Mapped | `ModelMethod.contributions[HubbardInteractions]` | Same target as `method.lattice_model_hamiltonian.hubbard_kanamori_model` and the `HubbardKanamoriModel.*` rows. |
 | `method.molecule_parameters` | Unmapped | — | No `MoleculeParameters` container in nomad-simulations. |
 | `method.molecule_parameters.label` | Unmapped | — | No equivalent. |
 | `method.molecule_parameters.n_atoms` | Unmapped | — | No equivalent. |

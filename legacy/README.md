@@ -27,7 +27,7 @@ uv run python legacy/parity/parity_collect.py new $DATA new.json --normalize
 uv run python legacy/parity/parity_report.py --legacy legacy.json --new new.json
 ```
 
-Run the commands from the distribution root, so that its `nomad.yaml` applies: the parser repository's own `nomad.yaml` excludes the new VASP parser. The report is written to `parity_report.md`. Collection takes a few minutes per generation with `--normalize`; `--skip` lists code directories to leave out (ORCA by default).
+Run the commands from the distribution root, so that its `nomad.yaml` applies: the parser repository's own `nomad.yaml` excludes the new VASP parser. The report is written to `legacy/parity_report.md`. Collection takes a few minutes per generation with `--normalize`; `--skip` lists code directories to leave out (ORCA by default).
 
 ### How the comparison works
 

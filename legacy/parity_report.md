@@ -329,13 +329,7 @@ Each runschema leaf filled by a legacy parser is translated with the runschema m
 
 ## h5md
 
-- skipped `h5md/test_traj_openmm_reduced-SOL_5frames_07-10-25.h5`: legacy: ValueError: Cannot set [[4. 4. 4.]
- [4. 4. 4.]
- [4. 4. 4.]
- ...
- [4. 4. 4.]
- [4. 4. 4.]
- [4. 4. 4.]] for the scalar quantity atomisticparsers.h5md.metainfo.h5md.CalcEntry.value:Quantity.
+- skipped `h5md/test_traj_openmm_reduced-SOL_5frames_07-10-25.h5`: legacy: ValueError: Cannot set [[4. 4. 4.] [4. 4. 4.] [4. 4. 4.] ... [4. 4. 4.] [4. 4. 4.] [4. 4. 4.]] for the scalar quantity atomisticparsers.h5md.metainfo.h5md.CalcEntry.value:Quantity.
 
 ## lammps
 
