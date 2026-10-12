@@ -28,6 +28,7 @@ import re
 import subprocess
 import sys
 import time
+import tomllib
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
@@ -56,8 +57,19 @@ def gh(*args: str) -> str:
 
 
 def packages_by_repo(root: Path) -> tuple[dict[str, str], list[str]]:
-    """GitHub-hosted submodules as repo name -> path, plus the clone URLs of the others."""
+    """GitHub-hosted submodules as repo name -> path, plus the clone URLs of the others.
+
+    The others also include git dependencies declared in `[tool.uv.sources]` (nomad-gui),
+    which are not submodules.
+    """
     github, other = {}, []
+    with open(root / "pyproject.toml", "rb") as f:
+        sources = tomllib.load(f).get("tool", {}).get("uv", {}).get("sources", {})
+    other += [
+        source["git"]
+        for source in sources.values()
+        if "git" in source and not source["git"].startswith("https://github.com/")
+    ]
     out = git(
         "config", "-f", ".gitmodules", "--get-regexp", r"^submodule\..*\.url$", cwd=root
     )
@@ -307,12 +319,12 @@ def main() -> int:
         state = "blocked: " + ", ".join(problems) if problems else "ready"
         print(f"{repo}#{pr['number']} -> {pr['baseRefName']}: {state}  {pr['url']}")
         blocked += bool(problems)
-    if not found:
-        print("Nothing to merge.")
-        return 0
     if blocked:
         print(f"Not merging: {blocked} pull request(s) blocked.")
         return 1
+    if not found:
+        print("Nothing to merge.")
+        return 0
 
     merged: dict[str, tuple[str, int, str, str]] = {}
     pending = 0

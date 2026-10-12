@@ -36,6 +36,12 @@ on:
 permissions:
   contents: write
 
+# Merge runs are queued, never interleaved: two runs passing the gate together
+# could each merge part of their set before the other changes the picture.
+concurrency:
+  group: merge-coordinated-prs
+  cancel-in-progress: false
+
 jobs:
   merge:
     runs-on: ubuntu-latest
