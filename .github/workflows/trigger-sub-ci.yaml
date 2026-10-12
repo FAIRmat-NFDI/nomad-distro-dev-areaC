@@ -8,8 +8,10 @@ name: Trigger sub-CI
 # `uv sync` + pytest. GitLab-hosted dependencies (nomad-FAIR, nomad-gui)
 # are out of scope and are not dispatched.
 #
-# Requires the `SUB_CI_TOKEN` secret: a fine-grained PAT with `actions: write`
-# on the dependency repositories. The target workflow must declare a
+# Requires the `SUB_CI_TOKEN` secret of the `package-repos` environment: a
+# fine-grained PAT with `actions: write` on the dependency repositories. The
+# environment requires a reviewer's approval before the job (and the token) is
+# released. The target workflow must declare a
 # `workflow_dispatch` trigger; repositories where it is missing are reported
 # as warnings, not failures.
 
@@ -28,6 +30,7 @@ on:
 jobs:
   dispatch:
     runs-on: ubuntu-latest
+    environment: package-repos
     steps:
       - name: Dispatch dependency CIs
         env:
