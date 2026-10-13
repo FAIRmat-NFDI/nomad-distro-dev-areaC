@@ -13,7 +13,7 @@
 [submodule "packages/nomad-simulation-parsers"]
 	path = packages/nomad-simulation-parsers
 	url = https://github.com/FAIRmat-NFDI/nomad-parser-plugins-simulation.git
-	branch = develop
+	branch = fix/crystal-xc-order
 [submodule "packages/nomad-simulation-parser-test-fixtures"]
 	path = packages/nomad-simulation-parser-test-fixtures
 	url = https://github.com/FAIRmat-NFDI/nomad-simulation-parser-test-fixtures.git

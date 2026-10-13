@@ -41,7 +41,7 @@ nomad-external-eln-integrations = { git = "https://github.com/FAIRmat-NFDI/nomad
 "nomad-FAIR" = "develop"
 "nomad-simulations" = "develop"
 "nomad-file-parser" = "develop"
-"nomad-simulation-parsers" = "develop"
+"nomad-simulation-parsers" = "fix/crystal-xc-order"
 "nomad-simulation-parser-test-fixtures" = "main"
 "nomad-results-normalizer" = "main"
 
