@@ -5,7 +5,7 @@
 [submodule "packages/nomad-simulations"]
 	path = packages/nomad-simulations
 	url = https://github.com/FAIRmat-NFDI/nomad-simulations.git
-	branch = develop
+	branch = fix/representative-identity
 [submodule "packages/nomad-file-parser"]
 	path = packages/nomad-file-parser
 	url = https://github.com/FAIRmat-NFDI/nomad-file-parser.git
