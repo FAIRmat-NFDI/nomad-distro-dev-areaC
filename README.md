@@ -28,6 +28,14 @@ NOMAD_SIM_PARSERS_LARGE_FIXTURE_ROOT=$PWD/../nomad-simulation-parser-test-fixtur
   uv run pytest tests -m 'pipeline or large_fixture'
 ```
 
+**Standard setups.** `main` carries the stack above and is the base for everything else. A `std/<name>` branch is a standard setup built on top of it: the same tooling, with further packages added for a particular kind of work. Each one is kept current by merging `main` into it, so changes meant for every setup go to `main` first, and the weekly `Update Submodules` workflow opens a pull request against each of these branches, not only `main`.
+
+| Branch | Adds | Use it for |
+| --- | --- | --- |
+| `main` | — | coordinated development of the packages listed above |
+| `std/main` | nothing; a copy of `main` | the default setup under the `std/` namespace |
+| `std/legacy` | the legacy parsers (`electronic-parsers`, `atomistic-parsers`, `workflow-parsers`) and the `runschema` and `simulationworkflowschema` schemas they write, as editable members | comparing legacy and new parser output and maintaining the mapping between the schemas; see the README on that branch |
+
 ## Quickstart
 
 ```bash
@@ -73,7 +81,7 @@ The purpose of this distribution is to make changes that span several repositori
 
 **Branches.** For a coordinated change, pick one descriptive branch name and use it in every repository the change touches. Create the branch from the tracked branch (usually `develop`) in each affected package repository, and a branch with the same name from this repository's starting base. In the distro branch, record the shared branch for the affected packages (`uv run poe record`) and commit the submodule pointers at the tips of the package branches (work inside `packages/<package>` as in any git checkout: branch, commit, push; then `uv run poe pin` in the distro commits the moved pointers). The submodule pointers make the distro branch an exact snapshot of the coordinated state, which `uv sync` materializes; the one floating element is `nomad-gui`, which resolves from its `develop` branch at lock time. The branch namespace in this repository follows two conventions:
 
-- Starting bases are `main` and, in the future, additional standard setups published as `std/<branch name>`; coordinated work forks from and merges back into one of these.
+- Starting bases are `main` and the standard setups `std/<name>` listed under [What this distribution tracks](#what-this-distribution-tracks); coordinated work forks from and merges back into one of these.
 - Feature branches carry their owner's initials as a prefix, e.g. `jfr/<branch name>`, and the same prefixed name is used in every repository the change touches.
 
 **Pull requests.**
