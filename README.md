@@ -1,40 +1,8 @@
 # NOMAD Area C Development Distribution
 
-This repository is the common starting base for FAIRmat Area C (computational materials science) to develop setups that coordinate changes across the NOMAD simulation stack. It is a fork of [`nomad-distro-dev`](https://github.com/FAIRmat-NFDI/nomad-distro-dev): a `uv` workspace that installs `nomad-lab` and a curated set of plugins in editable mode from git submodules under `packages/`, so a single environment spans all repositories under active development.
+This repository is the common starting base for FAIRmat Area C (computational materials science) work on the NOMAD simulation stack. It bundles the repositories of that stack as editable checkouts in one `uv` workspace, on `main` and on standard setups published as `std/<name>` branches that add further packages for a particular kind of work, and ships the tools around them: poe tasks that set the environment up and keep every package on its recorded branch, and workflows that advance the packages weekly, dispatch their CI, and merge a change spanning several repositories as one unit. The packages and the standard setups are listed in [What this distribution tracks](#what-this-distribution-tracks) at the end.
 
-For the general setup instructions (Docker services, `uv` installation, adding or removing plugins, day-to-day commands), refer to the upstream [`nomad-distro-dev` README](https://github.com/FAIRmat-NFDI/nomad-distro-dev#readme). This README only covers what is specific to the Area C distribution: which packages it tracks, the local setup with worktrees and package branches, and the protocol for coordinated branches, pull requests, CI, and merging across them.
-
-## What this distribution tracks
-
-Each coordinated repository follows the branch listed below — `develop` wherever one exists, otherwise `main`:
-
-| Package | Repository | How it is included |
-| --- | --- | --- |
-| `nomad-lab` | [nomad-FAIR](https://gitlab.mpcdf.mpg.de/nomad-lab/nomad-FAIR) (GitLab) | submodule, editable |
-| `nomad-simulations` | [nomad-simulations](https://github.com/FAIRmat-NFDI/nomad-simulations) | submodule, editable |
-| `nomad-simulation-parsers` | [nomad-parser-plugins-simulation](https://github.com/FAIRmat-NFDI/nomad-parser-plugins-simulation) | submodule, editable |
-| `nomad-file-parser` | [nomad-file-parser](https://github.com/FAIRmat-NFDI/nomad-file-parser) | submodule, editable |
-| `nomad-results-normalizer` | [nomad-results-normalizer](https://github.com/FAIRmat-NFDI/nomad-results-normalizer) | submodule on `main`, editable |
-| `nomad-gui` | [nomad-gui](https://gitlab.mpcdf.mpg.de/nomad-lab/nomad-gui) (GitLab) | `uv` git dependency resolved from `develop` at lock time (the Python package lives in the repository's `infra/` directory); no checkout under `packages/`, so not editable here |
-| (no package) | [nomad-simulation-parser-test-fixtures](https://github.com/FAIRmat-NFDI/nomad-simulation-parser-test-fixtures) | submodule on `main`; large test inputs for `nomad-simulation-parsers`, not a Python package |
-
-The branch each package follows is recorded in `pyproject.toml` under `[tool.distro.packages]` and mirrored in `.gitmodules` (see [Local setup](#local-setup-worktrees-and-package-branches)), and the weekly `Update Submodules` workflow opens a pull request that advances all pointers to the current tips. Note that `nomad-simulation-parsers` pins `nomad-simulations` and `nomad-file-parser` to their `develop` branches in its own `pyproject.toml`; the workspace drops these pins through `override-dependencies` so that the local checkouts are used instead.
-
-The test-fixtures submodule carries no Python package: it stores large test inputs for `nomad-simulation-parsers`, with paths mirroring `tests/data/` in the parser repository, and is excluded from the `uv` workspace. It tracks `main` because the repository has no `develop` branch. The parser tests marked `large_fixture` (and the pipeline tests that use them) read these inputs from the directory named by `NOMAD_SIM_PARSERS_LARGE_FIXTURE_ROOT`, so point it at the submodule's `tests/data` when running them locally:
-
-```bash
-cd packages/nomad-simulation-parsers
-NOMAD_SIM_PARSERS_LARGE_FIXTURE_ROOT=$PWD/../nomad-simulation-parser-test-fixtures/tests/data \
-  uv run pytest tests -m 'pipeline or large_fixture'
-```
-
-**Standard setups.** `main` carries the stack above and is the base for everything else. A `std/<name>` branch is a standard setup built on top of it: the same tooling, with further packages added for a particular kind of work. Each one is kept current by merging `main` into it, so changes meant for every setup go to `main` first, and the weekly `Update Submodules` workflow opens a pull request against each of these branches, not only `main`.
-
-| Branch | Adds | Use it for |
-| --- | --- | --- |
-| `main` | — | coordinated development of the packages listed above |
-| `std/main` | nothing; a copy of `main` | the default setup under the `std/` namespace |
-| `std/legacy` | the legacy parsers (`electronic-parsers`, `atomistic-parsers`, `workflow-parsers`) and the `runschema` and `simulationworkflowschema` schemas they write, as editable members | comparing legacy and new parser output and maintaining the mapping between the schemas; see the README on that branch |
+The workspace is a fork of [`nomad-distro-dev`](https://github.com/FAIRmat-NFDI/nomad-distro-dev), which installs `nomad-lab` and the plugins in editable mode from git submodules under `packages/`. For the general setup instructions (Docker services, `uv` installation, adding or removing plugins, day-to-day commands), refer to the upstream [`nomad-distro-dev` README](https://github.com/FAIRmat-NFDI/nomad-distro-dev#readme). This README only covers what is specific to the Area C distribution: the local setup with worktrees and package branches, the protocol for coordinated branches, pull requests, CI, and merging across repositories, and what it tracks.
 
 ## Quickstart
 
@@ -105,3 +73,35 @@ The `ref` input defaults to `tracked`, which resolves to each repository's defau
 It dispatches the `actions.yml` CI of each listed GitHub repository on the given ref and links the resulting runs in the workflow summary. Two properties to be aware of: each repository tests its branch in isolation, with its own dependency resolution rather than the distro workspace, and the dispatch is fire-and-forget — results are checked through the summary links, not reflected in the trigger run. The GitLab-hosted repositories (`nomad-FAIR`, `nomad-gui`) are not covered. The workflow runs in the `package-repos` environment, which holds the `SUB_CI_TOKEN` secret and requires a reviewer to approve each dispatch. If a repository is reported as a warning instead of a dispatch, that secret or the target's `workflow_dispatch` trigger needs attention from a maintainer.
 
 The combined state — all coordinated branches resolved together through the workspace overrides — is verified locally: `uv sync` to materialize it, then run the test suites of the affected packages with `uv run --directory packages/<package> pytest`.
+
+## What this distribution tracks
+
+Each coordinated repository follows the branch listed below — `develop` wherever one exists, otherwise `main`:
+
+| Package | Repository | How it is included |
+| --- | --- | --- |
+| `nomad-lab` | [nomad-FAIR](https://gitlab.mpcdf.mpg.de/nomad-lab/nomad-FAIR) (GitLab) | submodule, editable |
+| `nomad-simulations` | [nomad-simulations](https://github.com/FAIRmat-NFDI/nomad-simulations) | submodule, editable |
+| `nomad-simulation-parsers` | [nomad-parser-plugins-simulation](https://github.com/FAIRmat-NFDI/nomad-parser-plugins-simulation) | submodule, editable |
+| `nomad-file-parser` | [nomad-file-parser](https://github.com/FAIRmat-NFDI/nomad-file-parser) | submodule, editable |
+| `nomad-results-normalizer` | [nomad-results-normalizer](https://github.com/FAIRmat-NFDI/nomad-results-normalizer) | submodule on `main`, editable |
+| `nomad-gui` | [nomad-gui](https://gitlab.mpcdf.mpg.de/nomad-lab/nomad-gui) (GitLab) | `uv` git dependency resolved from `develop` at lock time (the Python package lives in the repository's `infra/` directory); no checkout under `packages/`, so not editable here |
+| (no package) | [nomad-simulation-parser-test-fixtures](https://github.com/FAIRmat-NFDI/nomad-simulation-parser-test-fixtures) | submodule on `main`; large test inputs for `nomad-simulation-parsers`, not a Python package |
+
+The branch each package follows is recorded in `pyproject.toml` under `[tool.distro.packages]` and mirrored in `.gitmodules` (see [Local setup](#local-setup-worktrees-and-package-branches)), and the weekly `Update Submodules` workflow opens a pull request that advances all pointers to the current tips. Note that `nomad-simulation-parsers` pins `nomad-simulations` and `nomad-file-parser` to their `develop` branches in its own `pyproject.toml`; the workspace drops these pins through `override-dependencies` so that the local checkouts are used instead.
+
+The test-fixtures submodule carries no Python package: it stores large test inputs for `nomad-simulation-parsers`, with paths mirroring `tests/data/` in the parser repository, and is excluded from the `uv` workspace. It tracks `main` because the repository has no `develop` branch. The parser tests marked `large_fixture` (and the pipeline tests that use them) read these inputs from the directory named by `NOMAD_SIM_PARSERS_LARGE_FIXTURE_ROOT`, so point it at the submodule's `tests/data` when running them locally:
+
+```bash
+cd packages/nomad-simulation-parsers
+NOMAD_SIM_PARSERS_LARGE_FIXTURE_ROOT=$PWD/../nomad-simulation-parser-test-fixtures/tests/data \
+  uv run pytest tests -m 'pipeline or large_fixture'
+```
+
+**Standard setups.** `main` carries the stack above and is the base for everything else. A `std/<name>` branch is a standard setup built on top of it: the same tooling, with further packages added for a particular kind of work. Each one is kept current by merging `main` into it, so changes meant for every setup go to `main` first, and the weekly `Update Submodules` workflow opens a pull request against each of these branches, not only `main`.
+
+| Branch | Adds | Use it for |
+| --- | --- | --- |
+| `main` | — | coordinated development of the packages listed above |
+| `std/main` | nothing; a copy of `main` | the default setup under the `std/` namespace |
+| `std/legacy` | the legacy parsers (`electronic-parsers`, `atomistic-parsers`, `workflow-parsers`) and the `runschema` and `simulationworkflowschema` schemas they write, as editable members | comparing legacy and new parser output and maintaining the mapping between the schemas; see the README on that branch |
