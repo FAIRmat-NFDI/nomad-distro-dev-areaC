@@ -42,34 +42,39 @@ It dispatches the `actions.yml` CI of each listed GitHub repository on the given
 
 ### Cross-package tests
 
-No workflow tests the combined state on GitHub; that is done locally, from the distro branch with the coordinated branches checked out. `uv sync` installs the checked-out commit of every package into one environment, and the workspace overrides make each package import the local checkouts of the others instead of released versions. A package test suite run from this environment therefore tests the package against the coordinated branches of its dependencies. Three suites depend on more than one package:
+No workflow tests the combined state on GitHub; that is done locally, from the distro branch with the coordinated branches checked out. `uv sync` installs the checked-out commit of every package into one environment, and the workspace overrides make each package import the local checkouts of the others instead of released versions. A package test suite run from this environment therefore tests the package against the coordinated branches of its dependencies. Before the coordinated merge, run the full suite of every package in scope:
 
 ```bash
 uv sync
-# parser output through NOMAD processing and normalization (nomad-FAIR, nomad-simulations)
+uv run --directory packages/<package> pytest
+```
+
+Three suites depend on more than one package, so they also cover the dependencies of the package they belong to. In order: the `pipeline` tests of `nomad-simulation-parsers` run parser output through NOMAD processing and normalization (`nomad-FAIR`, `nomad-simulations`); the same tests with the `large_fixture` marker add the large inputs from the test-fixtures submodule; the `nomad-results-normalizer` suite tests the mapping of `nomad-simulations` data to `archive.results` (`nomad-FAIR`, `nomad-simulations`).
+
+```bash
 uv run --directory packages/nomad-simulation-parsers pytest tests -m pipeline
-# the same, on the large inputs from the test-fixtures submodule
+
 NOMAD_SIM_PARSERS_LARGE_FIXTURE_ROOT=$PWD/packages/nomad-simulation-parser-test-fixtures/tests/data \
   uv run --directory packages/nomad-simulation-parsers pytest tests -m 'pipeline or large_fixture'
-# the mapping of nomad-simulations data to archive.results (nomad-FAIR, nomad-simulations)
+
 uv run --directory packages/nomad-results-normalizer pytest
 ```
 
-Run the full suite of every package in scope before the coordinated merge: `uv run --directory packages/<package> pytest`.
-
 ### Additive-output check
 
-`nomad-simulation-parsers` ships a check that parser output only grows: `tests/parsers/generate_snapshots.py` parses one mainfile per parser and writes `archive.data` and `archive.workflow2` to JSON, and `tests/parsers/compare_snapshots.py` compares two such files leaf by leaf. Added leaves pass (reported as a warning on GitHub); a removed or changed leaf fails. In the parser repository, `tests/parsers/check_additivity.sh` and the `additive-output-changes` workflow apply it to two refs of the parsers. Run from this workspace, the generator imports the checked-out `nomad-simulations` and `nomad-FAIR`, so the same two scripts measure the effect of a change in those packages on parser output: snapshot with the base branches, switch to the coordinated branches, snapshot again, compare.
+`nomad-simulation-parsers` ships a check that parser output only grows: `tests/parsers/generate_snapshots.py` parses one mainfile per parser and writes `archive.data` and `archive.workflow2` to JSON, and `tests/parsers/compare_snapshots.py` compares two such files leaf by leaf. Added leaves pass (reported as a warning on GitHub); a removed or changed leaf fails. In the parser repository, `tests/parsers/check_additivity.sh` and the `additive-output-changes` workflow apply it to two refs of the parsers, with dependencies resolved from the parser repository's lock file.
+
+Run from this workspace, the generator imports the checked-out `nomad-simulations` and `nomad-FAIR`, so the same two scripts measure the effect of a change in those packages on parser output. The steps: with the packages on their base branches (`develop` or `main`), write the target snapshot; move the packages onto the coordinated branches with `poe track`; write the source snapshot; compare the two. Parser directory names after the output path (e.g. `vasp fhiaims`) restrict the snapshot to those parsers.
 
 ```bash
-# packages on the base branches (develop or main)
 uv run --directory packages/nomad-simulation-parsers python tests/parsers/generate_snapshots.py /tmp/target.json
-uv run poe track      # moves the packages onto the recorded (coordinated) branches
+
+uv run poe track
+
 uv run --directory packages/nomad-simulation-parsers python tests/parsers/generate_snapshots.py /tmp/source.json
+
 uv run --directory packages/nomad-simulation-parsers python tests/parsers/compare_snapshots.py /tmp/target.json /tmp/source.json
 ```
-
-Pass parser directory names after the output path (e.g. `vasp fhiaims`) to restrict the snapshot. The parser repository's own workflow does not cover this case: it resolves dependencies from the parser repository's lock file, not from this workspace.
 
 ## Quickstart
 
