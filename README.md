@@ -98,10 +98,20 @@ NOMAD_SIM_PARSERS_LARGE_FIXTURE_ROOT=$PWD/../nomad-simulation-parser-test-fixtur
   uv run pytest tests -m 'pipeline or large_fixture'
 ```
 
-**Standard setups.** `main` carries the stack above and is the base for everything else. A `std/<name>` branch is a standard setup built on top of it: the same tooling, with further packages added for a particular kind of work. Each one is kept current by merging `main` into it, so changes meant for every setup go to `main` first, and the weekly `Update Submodules` workflow opens a pull request against each of these branches, not only `main`.
+**Standard setups.** `main` carries the stack above and is the base for everything else. A `std/<name>` branch is a standard setup built on top of it: the same tooling, with further packages added for a particular kind of work, and its README documents those additions. Each one is kept current by merging `main` into it, so changes meant for every setup go to `main` first, and the weekly `Update Submodules` workflow opens a pull request against each of these branches, not only `main`.
 
-| Branch | Adds | Use it for |
+| Branch | Use it for |
+| --- | --- |
+| `main` | coordinated development of the packages listed above |
+| `std/main` | the default setup under the `std/` namespace; identical to `main`, nothing added |
+| `std/legacy` | work that bridges the legacy simulation stack and the one above: comparing what the legacy parsers write to `archive.run` with what the new parsers write to `archive.data`, and maintaining the mapping between the two schemas |
+
+`std/legacy` adds the legacy parsers and the schemas they write as editable workspace members, tracking `develop` (or `master` where no `develop` exists), and includes their entry points in `nomad.yaml` so both parser generations load side by side:
+
+| Package | Repository | How it is included |
 | --- | --- | --- |
-| `main` | — | coordinated development of the packages listed above |
-| `std/main` | nothing; a copy of `main` | the default setup under the `std/` namespace |
-| `std/legacy` | the legacy parsers (`electronic-parsers`, `atomistic-parsers`, `workflow-parsers`) and the `runschema` and `simulationworkflowschema` schemas they write, as editable members | comparing legacy and new parser output and maintaining the mapping between the schemas; see the README on that branch |
+| `nomad-parser-plugins-electronic` (`electronicparsers`) | [electronic-parsers](https://github.com/nomad-coe/electronic-parsers) | submodule, editable |
+| `nomad-parser-plugins-atomistic` (`atomisticparsers`) | [atomistic-parsers](https://github.com/nomad-coe/atomistic-parsers) | submodule, editable |
+| `nomad-parser-plugins-workflow` (`workflowparsers`) | [workflow-parsers](https://github.com/nomad-coe/workflow-parsers) | submodule on `master`, editable |
+| `nomad-schema-plugin-run` (`runschema`) | [nomad-schema-plugin-run](https://github.com/nomad-coe/nomad-schema-plugin-run) | submodule, editable |
+| `nomad-schema-plugin-simulation-workflow` (`simulationworkflowschema`) | [nomad-schema-plugin-simulation-workflow](https://github.com/nomad-coe/nomad-schema-plugin-simulation-workflow) | submodule, editable |
