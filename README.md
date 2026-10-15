@@ -4,18 +4,40 @@ This repository is the common starting base for FAIRmat Area C (computational ma
 
 The workspace is a fork of [`nomad-distro-dev`](https://github.com/FAIRmat-NFDI/nomad-distro-dev), which installs `nomad-lab` and the plugins in editable mode from git submodules under `packages/`. For the general setup instructions (Docker services, `uv` installation, adding or removing plugins, day-to-day commands), refer to the upstream [`nomad-distro-dev` README](https://github.com/FAIRmat-NFDI/nomad-distro-dev#readme). This README only covers what is specific to the Area C distribution: the local setup with worktrees and package branches, the protocol for coordinated branches, pull requests, CI, and merging across repositories, and what it tracks.
 
-## Issues and pull requests
+## Coordinated development protocol
 
-Two kinds of work are tracked here, and they follow different rules.
+The purpose of this distribution is to make changes that span several repositories reviewable and testable as one unit. Two kinds of work are tracked here, and they follow different rules.
 
-**Distribution issues** concern this repository itself: setup, tooling, workflows, documentation, the recorded branches. They carry the `distro` label. A pull request that addresses one is based on `main` (or on the `std/<name>` branch it is specific to), needs one approval, and is merged; `main` is then merged into every `std/<name>` branch so all setups pick it up.
+**Distribution issues** concern this repository itself: setup, tooling, workflows, documentation, the recorded branches. They carry the `distro` label. A pull request that addresses one is based on `main` (or on the `std/<name>` branch it is specific to), needs one approval, and is merged; `main` is then merged into every `std/<name>` branch so all setups pick it up. The starting bases (`main` and `std/<name>`) only move through such pull requests and the weekly `Update Submodules` pull requests; no direct pushes.
 
-**Coordination issues** track a change that spans several packages. They carry labels for the packages in scope, link the package issues and pull requests they coordinate, and those link back. A pull request for one may exist here, but it is a working record, not a change to the distribution:
+**Coordination issues** track a change that spans several packages. They carry labels for the packages in scope, link the package issues and pull requests they coordinate, and those link back. A pull request for one may exist here, but it is a working record, not a change to the distribution: it is never merged into a starting base, and it is closed by hand, together with its issue, once the package pull requests are in. The protocol for such a change has three parts: a branch convention, a coordinated set of pull requests, and CI verification.
 
-- It branches from a starting base under the owner's initials, `<initials>/<name>`, and that same branch name is used in every package repository the change touches. It records the shared branch (`uv run poe record`) and pins the package commits (`uv run poe pin`), so the coordinated state can be checked out and tested as one unit; the package repositories' own CI is run on the shared branch through the `Trigger sub-CI` workflow.
-- It is never merged into `main` or a `std/<name>` branch. Its purpose ends when the package pull requests are in: the `Merge coordinated PRs` workflow squash-merges them leaves first and records the resulting commits on the branch, after which the pull request is closed by hand, together with its issue.
+**Branches.** Pick one descriptive branch name and use it in every repository the change touches. Create the branch from the tracked branch (usually `develop`) in each affected package repository, and a branch with the same name from this repository's starting base. In the distro branch, record the shared branch for the affected packages (`uv run poe record`) and commit the submodule pointers at the tips of the package branches (work inside `packages/<package>` as in any git checkout: branch, commit, push; then `uv run poe pin` in the distro commits the moved pointers; see [Local setup](#local-setup-worktrees-and-package-branches)). The submodule pointers make the distro branch an exact snapshot of the coordinated state, which `uv sync` materializes; the one floating element is `nomad-gui`, which resolves from its `develop` branch at lock time. The branch namespace in this repository follows two conventions:
 
-Starting bases (`main` and `std/<name>`) only move through distribution pull requests; no direct pushes. Assign your pull requests to yourself. The mechanics behind these rules are in [Coordinated development protocol](#coordinated-development-protocol).
+- Starting bases are `main` and the standard setups `std/<name>` listed under [What this distribution tracks](#what-this-distribution-tracks); coordinated work forks from one of these and is not merged back.
+- Feature branches carry their owner's initials as a prefix, e.g. `jfr/<branch name>`, and the same prefixed name is used in every repository the change touches.
+
+**Pull requests.**
+
+- Open a pull request in each affected package repository (base: its tracked branch, usually `develop`) and, as the coordination record, one in this repository (base: the starting branch, e.g. `main`). Assign your pull requests to yourself.
+- The distro pull request is the coordination point: its description lists and links every package pull request, and each package pull request links back to it.
+- Merge in dependency order, leaves first: package pull requests are merged into their tracked branches, then the distro branch is updated to point the submodules at the resulting commits. Both steps are automated by the `Merge coordinated PRs` workflow (see Merging below).
+- The distro pull request is not merged: once the package pull requests are in and the pointers recorded, close it by hand together with its issue. The next weekly `Update Submodules` run brings the merged commits into `main` and the `std/<name>` branches.
+
+**Merging.** The `Merge coordinated PRs` workflow (`.github/workflows/merge-coordinated-prs.yaml`) performs the merge step. Run it from the distro branch of the change (or pass the branch name as input): it finds the package pull requests whose head is that branch, checks that every open one can be merged (targets the default branch, not a draft, no conflicts, checks green, reviews done; a closed, unmerged one blocks too) and refuses to merge anything otherwise, since merges across repositories are not atomic. It then squash-merges them leaves first, each pinned to the head commit that passed the checks, points the submodules at the resulting commits, sets the recorded branches back to the base branches, and pushes that commit to the distro branch. Already merged pull requests count as done, so a run that stopped halfway can be repeated. The `dry_run` input (default on) only reports; the `body` input replaces the squash commit message body of every merged pull request. The distro pull request is then closed by hand. The same logic runs locally as `uv run poe merge-prs <branch> [-n]` from a clean checkout of that distro branch, with an authenticated `gh`. The workflow runs in the `package-repos` environment, which holds the `MERGE_TOKEN` secret (a fine-grained PAT that may merge in the package repositories) and requires a reviewer to approve each dispatch before the token is released, since the job executes the script of the dispatched branch. Branches of the GitLab-hosted packages are reported and must be merged by hand.
+
+**CI verification.** Each package repository runs its own CI when its branch is pushed, so the per-repository checks come for free. To re-run those per-repository checks on demand, this repository provides the `Trigger sub-CI` workflow (`.github/workflows/trigger-sub-ci.yaml`). Run it from the Actions tab or with the CLI:
+
+```bash
+gh workflow run trigger-sub-ci.yaml -f ref=<branch> \
+  -f repos=nomad-simulations,nomad-parser-plugins-simulation,nomad-file-parser,nomad-results-normalizer
+```
+
+The `ref` input defaults to `tracked`, which resolves to each repository's default branch (`develop` or `main` per the package table under [What this distribution tracks](#what-this-distribution-tracks)) — the right choice for a routine health check. For a coordinated change, pass the shared branch name explicitly; repositories without that branch are reported as warnings.
+
+It dispatches the `actions.yml` CI of each listed GitHub repository on the given ref and links the resulting runs in the workflow summary. Two properties to be aware of: each repository tests its branch in isolation, with its own dependency resolution rather than the distro workspace, and the dispatch is fire-and-forget — results are checked through the summary links, not reflected in the trigger run. The GitLab-hosted repositories (`nomad-FAIR`, `nomad-gui`) are not covered. The workflow runs in the `package-repos` environment, which holds the `SUB_CI_TOKEN` secret and requires a reviewer to approve each dispatch. If a repository is reported as a warning instead of a dispatch, that secret or the target's `workflow_dispatch` trigger needs attention from a maintainer.
+
+The combined state — all coordinated branches resolved together through the workspace overrides — is verified locally: `uv sync` to materialize it, then run the test suites of the affected packages with `uv run --directory packages/<package> pytest`.
 
 ## Quickstart
 
@@ -60,37 +82,6 @@ uv sync
 Initialise the submodules with plain `git` first: `uv run` syncs the workspace before running a task, which fails while `packages/` is empty. Remove a worktree with `git worktree remove ../<name>` once its packages hold no uncommitted work.
 
 **Docker in worktrees.** Docker Compose names its volumes after the directory, so `docker compose up -d` inside a worktree creates a separate, empty set of volumes (`<name>_nomad_mongo`, `<name>_nomad_elastic`, ...). That suits throwaway tests; for uploads and entries that should persist, start the infrastructure from the main clone and use its volumes. Only one stack can run at a time, because the compose file fixes the container names (`nomad_elastic`, `nomad_mongo`, `nomad_temporal`) and ports, so stop the running stack before switching. Remove a worktree's volumes with `docker compose down -v` from that worktree when its tests are done.
-
-## Coordinated development protocol
-
-The purpose of this distribution is to make changes that span several repositories reviewable and testable as one unit. The protocol has three parts: a branch convention, a coordinated set of pull requests, and CI verification.
-
-**Branches.** For a coordinated change, pick one descriptive branch name and use it in every repository the change touches. Create the branch from the tracked branch (usually `develop`) in each affected package repository, and a branch with the same name from this repository's starting base. In the distro branch, record the shared branch for the affected packages (`uv run poe record`) and commit the submodule pointers at the tips of the package branches (work inside `packages/<package>` as in any git checkout: branch, commit, push; then `uv run poe pin` in the distro commits the moved pointers). The submodule pointers make the distro branch an exact snapshot of the coordinated state, which `uv sync` materializes; the one floating element is `nomad-gui`, which resolves from its `develop` branch at lock time. The branch namespace in this repository follows two conventions:
-
-- Starting bases are `main` and the standard setups `std/<name>` listed under [What this distribution tracks](#what-this-distribution-tracks); coordinated work forks from one of these and is not merged back.
-- Feature branches carry their owner's initials as a prefix, e.g. `jfr/<branch name>`, and the same prefixed name is used in every repository the change touches.
-
-**Pull requests.**
-
-- Open a pull request in each affected package repository (base: its tracked branch, usually `develop`) and, as the coordination record, one in this repository (base: the starting branch, e.g. `main`).
-- The distro pull request is the coordination point: its description lists and links every package pull request, and each package pull request links back to it.
-- Merge in dependency order, leaves first: package pull requests are merged into their tracked branches, then the distro branch is updated to point the submodules at the resulting commits. Both steps are automated by the `Merge coordinated PRs` workflow (see Merging below).
-- The distro pull request is not merged: once the package pull requests are in and the pointers recorded, close it by hand together with its issue. The next weekly `Update Submodules` run brings the merged commits into `main` and the `std/<name>` branches.
-
-**Merging.** The `Merge coordinated PRs` workflow (`.github/workflows/merge-coordinated-prs.yaml`) performs the merge step. Run it from the distro branch of the change (or pass the branch name as input): it finds the package pull requests whose head is that branch, checks that every open one can be merged (targets the default branch, not a draft, no conflicts, checks green, reviews done; a closed, unmerged one blocks too) and refuses to merge anything otherwise, since merges across repositories are not atomic. It then squash-merges them leaves first, each pinned to the head commit that passed the checks, points the submodules at the resulting commits, sets the recorded branches back to the base branches, and pushes that commit to the distro branch. Already merged pull requests count as done, so a run that stopped halfway can be repeated. The `dry_run` input (default on) only reports; the `body` input replaces the squash commit message body of every merged pull request. The distro pull request is then closed by hand. The same logic runs locally as `uv run poe merge-prs <branch> [-n]` from a clean checkout of that distro branch, with an authenticated `gh`. The workflow runs in the `package-repos` environment, which holds the `MERGE_TOKEN` secret (a fine-grained PAT that may merge in the package repositories) and requires a reviewer to approve each dispatch before the token is released, since the job executes the script of the dispatched branch. Branches of the GitLab-hosted packages are reported and must be merged by hand.
-
-**CI verification.** Each package repository runs its own CI when its branch is pushed, so the per-repository checks come for free. To re-run those per-repository checks on demand, this repository provides the `Trigger sub-CI` workflow (`.github/workflows/trigger-sub-ci.yaml`). Run it from the Actions tab or with the CLI:
-
-```bash
-gh workflow run trigger-sub-ci.yaml -f ref=<branch> \
-  -f repos=nomad-simulations,nomad-parser-plugins-simulation,nomad-file-parser,nomad-results-normalizer
-```
-
-The `ref` input defaults to `tracked`, which resolves to each repository's default branch (`develop` or `main` per the table above) — the right choice for a routine health check. For a coordinated change, pass the shared branch name explicitly; repositories without that branch are reported as warnings.
-
-It dispatches the `actions.yml` CI of each listed GitHub repository on the given ref and links the resulting runs in the workflow summary. Two properties to be aware of: each repository tests its branch in isolation, with its own dependency resolution rather than the distro workspace, and the dispatch is fire-and-forget — results are checked through the summary links, not reflected in the trigger run. The GitLab-hosted repositories (`nomad-FAIR`, `nomad-gui`) are not covered. The workflow runs in the `package-repos` environment, which holds the `SUB_CI_TOKEN` secret and requires a reviewer to approve each dispatch. If a repository is reported as a warning instead of a dispatch, that secret or the target's `workflow_dispatch` trigger needs attention from a maintainer.
-
-The combined state — all coordinated branches resolved together through the workspace overrides — is verified locally: `uv sync` to materialize it, then run the test suites of the affected packages with `uv run --directory packages/<package> pytest`.
 
 ## What this distribution tracks
 
