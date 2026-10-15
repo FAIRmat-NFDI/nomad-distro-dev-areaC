@@ -34,7 +34,12 @@ Unlike upstream, this distribution commits its `nomad.yaml`. Authentication uses
 
 ## Local setup: worktrees and package branches
 
-**Recorded state.** Two things describe which code a distro branch uses. The branch each package follows is recorded in `pyproject.toml` under `[tool.distro.packages]` (mirrored in `.gitmodules`); `uv` ignores this table, since the workspace only knows the folders under `packages/`. The exact commits are the submodule pointers stored in the distro commit (`git ls-tree HEAD packages/`). Three poe tasks move between the checkouts and this record; each takes `-n` for a dry run:
+**Recorded state.** Two things describe which code a distro branch uses:
+
+1. **The branch each package follows**, recorded in `pyproject.toml` under `[tool.distro.packages]` and mirrored in `.gitmodules`. `uv` ignores this table: the workspace only knows the folders under `packages/`.
+2. **The exact commits**, stored as the submodule pointers of the distro commit (`git ls-tree HEAD packages/`).
+
+Three poe tasks move between the checkouts and this record; each takes `-n` for a dry run:
 
 - `uv run poe track` switches every package to its recorded branch and fast-forwards it to `origin`. Packages on another branch, with uncommitted changes, or not initialised are left alone.
 - `uv run poe record` writes the branches currently checked out into `[tool.distro.packages]` and `.gitmodules` (detached packages keep their entry). Review with `git diff` and commit.
