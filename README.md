@@ -46,7 +46,7 @@ uv run --directory packages/nomad-simulation-parsers pytest tests -m pipeline
 # the same, on the large inputs from the test-fixtures submodule
 NOMAD_SIM_PARSERS_LARGE_FIXTURE_ROOT=$PWD/packages/nomad-simulation-parser-test-fixtures/tests/data \
   uv run --directory packages/nomad-simulation-parsers pytest tests -m 'pipeline or large_fixture'
-# the mapping of nomad-simulations data to archive.results, on parsed and normalized entries
+# the mapping of nomad-simulations data to archive.results (nomad-FAIR, nomad-simulations)
 uv run --directory packages/nomad-results-normalizer pytest
 ```
 
