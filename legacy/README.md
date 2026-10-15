@@ -16,6 +16,10 @@ Keep the table in step with both schemas. A new `nomad-simulations` attribute th
 uv run python legacy/parity/mapping_check.py
 ```
 
+## Parser selection
+
+The `std/legacy` `nomad.yaml` includes the entry points of both parser generations. For files both can read, `match_parser` returns only one of them, and `match_parser(..., parser_name=...)` forces the named parser without testing the file. To pick a generation, test the candidates' `is_mainfile` instead, as `parity/parity_collect.py` does.
+
 ## Parity report
 
 The report classifies, per code, every `runschema` leaf a legacy parser fills on the test files of `nomad-parser-plugins-simulation`: parity (the new parser fills the mapped target), parser gap (the target exists but stays empty), schema gap (Unmapped), unknown (missing from the table) and code-specific (`x_` quantities and references). Collect the filled paths of both generations on the same files, then compare them:
