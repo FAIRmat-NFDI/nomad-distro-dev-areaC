@@ -10,11 +10,11 @@ The purpose of this distribution is to make changes that span several repositori
 
 ### Distribution issues
 
-These concern this repository itself: setup, tooling, workflows, documentation, the recorded branches. They carry the `distro` label. A pull request that addresses one is based on `main` (or on the `std/<name>` branch it is specific to), needs one approval, and is merged; `main` is then merged into every `std/<name>` branch, so that every standard setup contains the change. The starting bases (`main` and `std/<name>`) move **only** through such pull requests and the weekly `Update Submodules` pull requests: **no direct pushes**.
+These concern this repository itself: setup, tooling, workflows, documentation, the recorded branches. Issues and pull requests of this kind carry the `distro` label. A pull request that addresses one is based on `main` (or on the `std/<name>` branch it is specific to), needs one approval, and is merged; `main` is then merged into every `std/<name>` branch, so that every standard setup contains the change. The starting bases (`main` and `std/<name>`) move **only** through such pull requests and the weekly `Update Submodules` pull requests: **no direct pushes**.
 
 ### Coordination issues
 
-These track a change that spans several packages. They carry labels for the packages in scope, link the package issues and pull requests they coordinate, and those link back. A pull request for one may exist here, but it only records the package branches and the pinned commits; it does not change the distribution. It is **never merged** into a starting base, and it is **closed by hand**, together with its issue, once the package pull requests are merged. The protocol for such a change has three parts: a branch convention, a coordinated set of pull requests, and CI verification.
+These track a change that spans several packages. Issues and pull requests of this kind carry one label per package in scope (`nomad-simulations`, `nomad-simulation-parsers`, ..., and `legacy` for the `std/legacy` stack); the issue links the package issues and pull requests it coordinates, and those link back. A pull request for one may exist here, but it only records the package branches and the pinned commits; it does not change the distribution. It is **never merged** into a starting base, and it is **closed by hand**, together with its issue, once the package pull requests are merged. The protocol for such a change has three parts: a branch convention, a coordinated set of pull requests, and CI verification.
 
 ### Branches
 
@@ -152,7 +152,7 @@ NOMAD_SIM_PARSERS_LARGE_FIXTURE_ROOT=$PWD/../nomad-simulation-parser-test-fixtur
 
 ### Standard setups
 
-`main` carries the stack above and is the base for everything else. A `std/<name>` branch is a standard setup built on top of it: the same tooling, with further packages added for a particular kind of work, and its README documents those additions. Each one is kept current by merging `main` into it, so **changes meant for every setup go to `main` first**, and the weekly `Update Submodules` workflow opens a pull request against each of these branches, not only `main`.
+`main` carries the stack above and is the base for everything else. A `std/<name>` branch is a standard setup built on top of it: the same tooling and the same README, with further packages added for a particular kind of work. Each one is kept current by merging `main` into it, so **changes meant for every setup go to `main` first**, and the weekly `Update Submodules` workflow opens a pull request against each of these branches, not only `main`.
 
 | Branch | Use it for |
 | --- | --- |
@@ -160,7 +160,7 @@ NOMAD_SIM_PARSERS_LARGE_FIXTURE_ROOT=$PWD/../nomad-simulation-parser-test-fixtur
 | `std/main` | the default setup under the `std/` namespace; identical to `main`, nothing added |
 | `std/legacy` | work that involves both the legacy simulation stack and the current one: comparing what the legacy parsers write to `archive.run` with what the new parsers write to `archive.data`, and maintaining the mapping between the two schemas |
 
-`std/legacy` adds the legacy parsers and the schemas they write as editable workspace members, tracking `develop` (or `master` where no `develop` exists), and includes their entry points in `nomad.yaml` so both parser generations load side by side:
+`std/legacy` adds the legacy parsers and the schemas they write as editable workspace members, tracking `develop` (or `master` where no `develop` exists), and includes their entry points in `nomad.yaml`, so both parser generations are loaded in the same deployment. The `legacy/` directory on that branch holds the tooling that relates the two stacks, documented in `legacy/README.md` there:
 
 | Package | Repository | How it is included |
 | --- | --- | --- |
