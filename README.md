@@ -169,20 +169,3 @@ NOMAD_SIM_PARSERS_LARGE_FIXTURE_ROOT=$PWD/../nomad-simulation-parser-test-fixtur
 | `nomad-parser-plugins-workflow` (`workflowparsers`) | [workflow-parsers](https://github.com/nomad-coe/workflow-parsers) | submodule on `master`, editable |
 | `nomad-schema-plugin-run` (`runschema`) | [nomad-schema-plugin-run](https://github.com/nomad-coe/nomad-schema-plugin-run) | submodule, editable |
 | `nomad-schema-plugin-simulation-workflow` (`simulationworkflowschema`) | [nomad-schema-plugin-simulation-workflow](https://github.com/nomad-coe/nomad-schema-plugin-simulation-workflow) | submodule, editable |
-
-## Standard setup std/legacy
-
-This branch is the `std/legacy` setup described above. The entry points of the legacy parsers and schemas are added to the `nomad.yaml` include list, so both parser generations are loaded in the same deployment. For files both generations can read, `match_parser` returns only one of them, and `match_parser(..., parser_name=...)` forces the named parser without testing the file; to pick a generation, test the candidates' `is_mainfile` instead, as `legacy/parity/parity_collect.py` does. Changes meant for every setup go to `main` first; `main` is merged into this branch with a merge commit, never squashed, so that the next merge only brings the new commits.
-
-### Tools
-
-The `legacy/` directory holds the tooling that relates the two stacks; its [README](legacy/README.md) documents the conventions and the method in detail.
-
-| Tool | Purpose |
-| --- | --- |
-| `legacy/runschema_mapping.md` | Attribute-level mapping from `runschema` to `nomad-simulations`, with Mapped, Partial and Unmapped status per row. |
-| `legacy/parity/mapping_check.py` | Verifies that every row of the mapping resolves in the installed schemas. |
-| `legacy/parity/parity_collect.py` | Runs the legacy or the new parsers on a directory of test files and records the archive paths they fill. |
-| `legacy/parity/parity_report.py` | Compares both recordings through the mapping and writes `legacy/parity_report.md`. |
-
-All of them run from the distribution root in the `std/legacy` environment; the tests are under `legacy/tests` (`uv run pytest legacy/tests`).
