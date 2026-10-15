@@ -18,7 +18,7 @@ These track a change that spans several packages. They carry labels for the pack
 
 ### Branches
 
-Pick **one** descriptive branch name and use it in **every** repository the change touches. Create the branch from the tracked branch (usually `develop`) in each affected package repository, and a branch with the same name from this repository's starting base. In the distro branch, record the shared branch for the affected packages (`uv run poe record`) and commit the submodule pointers at the tips of the package branches (work inside `packages/<package>` as in any git checkout: branch, commit, push; then `uv run poe pin` in the distro commits the moved pointers; see [Local setup](#local-setup-worktrees-and-package-branches)). With the submodule pointers committed, the distro branch pins the exact commit of every package, and `uv sync` installs exactly those commits. The one exception is `nomad-gui`, which is not a submodule: `uv` resolves it from its `develop` branch when it writes the lock file. The branch namespace in this repository follows two conventions:
+Pick **one** descriptive branch name and use it in **every** repository the change touches. Create the branch from the tracked branch (usually `develop`) in each affected package repository, and a branch with the same name from this repository's starting base. In the distro branch, record the shared branch for the affected packages (`uv run poe record`) and commit the submodule pointers at the tips of the package branches (work inside `packages/<package>` as in any git checkout: branch, commit, push; then `uv run poe pin` in the distro commits the moved pointers; see [Local setup](#local-setup)). With the submodule pointers committed, the distro branch pins the exact commit of every package, and `uv sync` installs exactly those commits. The one exception is `nomad-gui`, which is not a submodule: `uv` resolves it from its `develop` branch when it writes the lock file. The branch namespace in this repository follows two conventions:
 
 - Starting bases are `main` and the standard setups `std/<name>` listed under [What this distribution tracks](#what-this-distribution-tracks); coordinated work forks from one of these and is **not merged back**.
 - Feature branches carry their owner's initials as a prefix, e.g. `jfr/<branch name>`, and the same prefixed name is used in every repository the change touches.
@@ -85,7 +85,7 @@ Run a package's tests from the workspace with `uv run --directory packages/<pack
 
 Unlike upstream, this distribution commits its `nomad.yaml`. Authentication uses the central NOMAD Keycloak with the `fairdi_nomad_test` realm (shared test users such as `test`/`password`), and the loaded plugins are restricted to the Area C stack through wildcard patterns in `plugins.entry_points.include` (for example `nomad_simulation_parsers.*`), plus the two built-in search apps the GUI uses. Wildcard support in the include/exclude lists was merged into `nomad-FAIR`'s `develop` in September 2026, which this distribution tracks.
 
-## Local setup: worktrees and package branches
+## Local setup
 
 ### Recorded state
 
@@ -135,7 +135,7 @@ Each coordinated repository follows the branch listed below — `develop` wherev
 | `nomad-gui` | [nomad-gui](https://gitlab.mpcdf.mpg.de/nomad-lab/nomad-gui) (GitLab) | `uv` git dependency resolved from `develop` at lock time (the Python package lives in the repository's `infra/` directory); no checkout under `packages/`, so not editable here |
 | (no package) | [nomad-simulation-parser-test-fixtures](https://github.com/FAIRmat-NFDI/nomad-simulation-parser-test-fixtures) | submodule on `main`; large test inputs for `nomad-simulation-parsers`, not a Python package |
 
-The branch each package follows is recorded in `pyproject.toml` under `[tool.distro.packages]` and mirrored in `.gitmodules` (see [Local setup](#local-setup-worktrees-and-package-branches)), and the weekly `Update Submodules` workflow opens a pull request that advances all pointers to the current tips. Note that `nomad-simulation-parsers` pins `nomad-simulations` and `nomad-file-parser` to their `develop` branches in its own `pyproject.toml`; the workspace drops these pins through `override-dependencies` so that the local checkouts are used instead.
+The branch each package follows is recorded in `pyproject.toml` under `[tool.distro.packages]` and mirrored in `.gitmodules` (see [Local setup](#local-setup)), and the weekly `Update Submodules` workflow opens a pull request that advances all pointers to the current tips. Note that `nomad-simulation-parsers` pins `nomad-simulations` and `nomad-file-parser` to their `develop` branches in its own `pyproject.toml`; the workspace drops these pins through `override-dependencies` so that the local checkouts are used instead.
 
 The test-fixtures submodule carries no Python package: it stores large test inputs for `nomad-simulation-parsers`, with paths mirroring `tests/data/` in the parser repository, and is excluded from the `uv` workspace. It tracks `main` because the repository has no `develop` branch. The parser tests marked `large_fixture` (and the pipeline tests that use them) read these inputs from the directory named by `NOMAD_SIM_PARSERS_LARGE_FIXTURE_ROOT`, so point it at the submodule's `tests/data` when running them locally:
 
