@@ -45,6 +45,18 @@ uv run --directory packages/nomad-results-normalizer pytest
 
 Run the full suite of every package in scope before the coordinated merge: `uv run --directory packages/<package> pytest`.
 
+**Additive-output check.** `nomad-simulation-parsers` ships a check that parser output only grows: `tests/parsers/generate_snapshots.py` parses one mainfile per parser and writes `archive.data` and `archive.workflow2` to JSON, and `tests/parsers/compare_snapshots.py` compares two such files leaf by leaf. Added leaves pass (reported as a warning on GitHub); a removed or changed leaf fails. In the parser repository, `tests/parsers/check_additivity.sh` and the `additive-output-changes` workflow apply it to two refs of the parsers. Run from this workspace, the generator imports the checked-out `nomad-simulations` and `nomad-FAIR`, so the same two scripts measure the effect of a change in those packages on parser output: snapshot with the base branches, switch to the coordinated branches, snapshot again, compare.
+
+```bash
+# packages on the base branches (develop or main)
+uv run --directory packages/nomad-simulation-parsers python tests/parsers/generate_snapshots.py /tmp/target.json
+uv run poe track      # moves the packages onto the recorded (coordinated) branches
+uv run --directory packages/nomad-simulation-parsers python tests/parsers/generate_snapshots.py /tmp/source.json
+uv run --directory packages/nomad-simulation-parsers python tests/parsers/compare_snapshots.py /tmp/target.json /tmp/source.json
+```
+
+Pass parser directory names after the output path (e.g. `vasp fhiaims`) to restrict the snapshot. The parser repository's own workflow does not cover this case: it resolves dependencies from the parser repository's lock file, not from this workspace.
+
 ## Quickstart
 
 ```bash
