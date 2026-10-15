@@ -1,18 +1,44 @@
 name: Update Submodules and Create PR
 
+# Advances the submodule pointers of every starting base (main and each std/*
+# branch) to the tips of their tracked branches and opens one pull request per
+# base. Scheduled workflows only run from the default branch, so this file is
+# maintained on main and checks out the other bases explicitly.
+
 on:
   schedule:
     - cron: "0 17 * * 1" # Runs every Monday at 5 PM UTC
   workflow_dispatch: # Allows manual triggering
 
 jobs:
-  update-submodules:
+  bases:
     if: github.repository == 'FAIRmat-NFDI/nomad-distro-dev-areaC'
     runs-on: ubuntu-latest
+    outputs:
+      branches: ${{ steps.list.outputs.branches }}
+    steps:
+      - name: List starting bases
+        id: list
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          branches=$(gh api "repos/${GITHUB_REPOSITORY}/branches" --paginate \
+            --jq '[.[].name | select(. == "main" or startswith("std/"))]' | jq -c -s 'add')
+          echo "branches=${branches}" >> "$GITHUB_OUTPUT"
+          echo "Updating: ${branches}"
+
+  update-submodules:
+    needs: bases
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        base: ${{ fromJSON(needs.bases.outputs.branches) }}
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
+          ref: ${{ matrix.base }}
           fetch-depth: 0
 
       - name: Initialize and Update Submodules
@@ -35,7 +61,7 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           commit-message: "Update submodules"
-          title: "Update Submodules"
-          body: "This pull request updates all submodules to their latest versions."
-          branch: update-submodules
-          base: main
+          title: "Update Submodules (${{ matrix.base }})"
+          body: "This pull request updates all submodules of `${{ matrix.base }}` to their latest versions."
+          branch: update-submodules/${{ matrix.base }}
+          base: ${{ matrix.base }}
