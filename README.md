@@ -24,7 +24,7 @@ git clone --recurse-submodules git@github.com:FAIRmat-NFDI/nomad-distro-dev-area
 cd nomad-distro-dev-areaC
 uv run poe track   # moves the packages from the pinned commits onto their recorded branches
 uv run poe setup   # starts docker services (nomad.yaml is committed)
-uv run poe start   # API + new GUI at http://localhost:8000/nomad-oasis/gui/v2/
+uv run poe start   # serves the API and the new GUI at http://localhost:8000/nomad-oasis/gui/v2/
 ```
 
 Run a package's tests from the workspace with `uv run --directory packages/<package> pytest`.
@@ -49,11 +49,11 @@ For a coordinated change, check out the shared branch in each affected package, 
 **Worktrees.** One clone can hold several distro branches side by side with `git worktree`; each worktree gets its own package checkouts and its own `.venv`:
 
 ```bash
-cd nomad-distro-dev-areaC                       # the main clone
+cd nomad-distro-dev-areaC                       # starts from the main clone
 git worktree add -b <initials>/<name> ../<name> main
 cd ../<name>
-git submodule update --init                     # packages at the pinned commits, detached
-uv run poe track                                # packages onto their recorded branches
+git submodule update --init                     # checks the packages out at the pinned commits, detached
+uv run poe track                                # moves the packages onto their recorded branches
 uv sync
 ```
 
