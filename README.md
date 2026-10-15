@@ -23,7 +23,7 @@ The mechanics behind these rules are in [Coordinated development protocol](#coor
 ```bash
 git clone --recurse-submodules git@github.com:FAIRmat-NFDI/nomad-distro-dev-areaC.git
 cd nomad-distro-dev-areaC
-uv run poe track   # packages from the pinned commits onto their recorded branches
+uv run poe track   # moves the packages from the pinned commits onto their recorded branches
 uv run poe setup   # starts docker services (nomad.yaml is committed)
 uv run poe start   # API + new GUI at http://localhost:8000/nomad-oasis/gui/v2/
 ```
