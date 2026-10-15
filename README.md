@@ -4,6 +4,20 @@ This repository is the common starting base for FAIRmat Area C (computational ma
 
 The workspace is a fork of [`nomad-distro-dev`](https://github.com/FAIRmat-NFDI/nomad-distro-dev), which installs `nomad-lab` and the plugins in editable mode from git submodules under `packages/`. For the general setup instructions (Docker services, `uv` installation, adding or removing plugins, day-to-day commands), refer to the upstream [`nomad-distro-dev` README](https://github.com/FAIRmat-NFDI/nomad-distro-dev#readme). This README only covers what is specific to the Area C distribution: the local setup with worktrees and package branches, the protocol for coordinated branches, pull requests, CI, and merging across repositories, and what it tracks.
 
+## Issues and pull requests
+
+**Issues.** File an issue where the fix will land: a problem in one package goes to that package's repository, and this repository's issues are for the distribution itself (setup, tooling, workflows) and for changes that span several packages. A cross-package issue here links the package issues it depends on, and the package issues link back.
+
+**Pull requests.** The starting bases (`main` and the `std/<name>` branches) only move through pull requests, with one approval and a green CI; no direct pushes. For every change:
+
+- Branch from a starting base under your initials, `<initials>/<name>`, and use that same branch name in every package repository the change touches. Base the distro pull request on the starting base you forked from, and each package pull request on that package's tracked branch (`develop` or `main`).
+- Open one pull request per repository the change touches, plus one here. The one here is the coordination point: it links every package pull request, and each of them links back to it. A change to this repository alone (tooling, documentation, submodule pointers) needs only the one here.
+- Before asking for review, record the shared branch (`uv run poe record`) and pin the package commits (`uv run poe pin`), so the distro pull request is an exact, reproducible snapshot. Set the recorded branches back to the tracked ones before it is merged.
+- Assign the pull request to yourself and label it (`enhancement`, `bug`, `documentation`, ...). Keep it to one change; split unrelated work.
+- Package pull requests are merged by the `Merge coordinated PRs` workflow, which squash-merges them leaves first and updates the pointers; a person then merges the distro pull request. Do not merge package pull requests by hand while a coordinated merge is pending, and never merge a distro pull request whose pointers reference deleted or rewritten branches.
+
+The mechanics behind these rules are in [Coordinated development protocol](#coordinated-development-protocol).
+
 ## Quickstart
 
 ```bash
