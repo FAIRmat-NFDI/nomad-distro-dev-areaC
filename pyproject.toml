@@ -39,9 +39,9 @@ nomad-external-eln-integrations = { git = "https://github.com/FAIRmat-NFDI/nomad
 # Branch each package under packages/ follows (uv ignores this table). Read by `poe track`,
 # written by `poe record`; the exact commits are the submodule pointers (`poe pin`).
 "nomad-FAIR" = "develop"
-"nomad-simulations" = "develop"
+"nomad-simulations" = "smearing-kind-tetrahedra-square-wave"
 "nomad-file-parser" = "develop"
-"nomad-simulation-parsers" = "develop"
+"nomad-simulation-parsers" = "excitng-parser"
 "nomad-simulation-parser-test-fixtures" = "main"
 "nomad-results-normalizer" = "main"
 
