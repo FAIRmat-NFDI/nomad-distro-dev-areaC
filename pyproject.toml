@@ -19,6 +19,15 @@ dependencies = [
   "nomad-parser-plugins-workflow",
   "nomad-schema-plugin-run",
   "nomad-schema-plugin-simulation-workflow",
+  # std/legacy: legacy normalizers that fill `results` (material, structures, DOS, band
+  # structure, spectra, SOAP); lower bounds are the versions of the production
+  # nomad-distro, newer releases are taken as they come
+  "nomad-normalizer-plugin-system>=1.0.5",
+  "nomad-normalizer-plugin-simulation-workflow>=1.0.5",
+  "nomad-normalizer-plugin-dos>=1.0.7",
+  "nomad-normalizer-plugin-bandstructure>=1.0.4",
+  "nomad-normalizer-plugin-spectra>=1.0.4",
+  "nomad-normalizer-plugin-soap>=1.0.2",
 ]
 
 [tool.uv.workspace]

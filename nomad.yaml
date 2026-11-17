@@ -17,6 +17,14 @@ plugins:
       - 'workflowparsers:*'
       - 'runschema:*'
       - 'simulationworkflowschema:*'
+      # std/legacy: legacy normalizers; without `systemnormalizer`, legacy entries get
+      # no `results.material`, so the GUI shows no structure
+      - 'systemnormalizer:*'
+      - 'simulationworkflownormalizer:*'
+      - 'dosnormalizer:*'
+      - 'bandstructurenormalizer:*'
+      - 'spectranormalizer:*'
+      - 'soapnormalizer:*'
       # built-in search apps used by the GUI
       - 'apps/1_all/1_entries'
       - 'apps/2_theory/1_calculations'
